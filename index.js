@@ -198,7 +198,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!msg.message || (msg.key.fromMe && !getText(msg).trim().startsWith(PREFIX))) continue;
       const chat = msg.key.remoteJid;
       if (!chat || chat === "status@broadcast") continue;
-      const sender = msg.key.participant || (msg.key.fromMe ? sock.user?.id : chat);
+      const sender = msg.key.fromMe ? (sock.user?.id || msg.key.participant || chat) : (msg.key.participant || chat);
       const text = getText(msg).trim();
       if (!text) continue;
 
