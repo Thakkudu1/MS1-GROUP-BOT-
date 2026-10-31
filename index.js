@@ -164,7 +164,15 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 ━━━━━━━━━━━━━━
 💖 *BEST WISHES FROM MS1 GROUP!* 💖
 ━━━━━━━━━━━━━━`;
-        await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
+        let profilePicUrl = null;
+        try { profilePicUrl = await sock.profilePictureUrl(participant, "image"); } catch {}
+        if (profilePicUrl) {
+          await sock.sendMessage(event.id, { image: { url: profilePicUrl }, caption: welcomeText, mentions: [participant] }).catch(async () => {
+            await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
+          });
+        } else {
+          await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
+        }
       } else if (event.action === "remove") {
         await sock.sendMessage(event.id, { text: "👋 Goodbye @" + senderNumber(participant) + ". Wishing you all the best!", mentions: [participant] }).catch(() => {});
       }
