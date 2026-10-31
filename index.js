@@ -19,6 +19,7 @@ const WARNINGS = new Map();
 const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
+let restarting = false;
 
 function senderNumber(jid = "") {
   return jid.split("@")[0].split(":")[0].replace(/\D/g, "");
@@ -59,14 +60,28 @@ async function startBot() {
       console.log("\nScan this QR from WhatsApp > Linked devices:\n");
       qrcode.generate(qr, { small: true });
     }
-    if (connection === "open") console.log("MS1 GROUP BOT connected.");
-    if (connection === "close") {
+    if (connection === "open") {
+      restarting = false;
+      console.log("MS1 GROUP BOT connected.");
+    }
+    if (connection === "close" && !restarting) {
       const code = lastDisconnect?.error?.output?.statusCode;
-      if (code !== DisconnectReason.loggedOut) {
-        console.log("Connection closed; reconnecting...");
-        setTimeout(startBot, 3000);
+      if (code === DisconnectReason.loggedOut) {
+        restarting = true;
+        console.log("WhatsApp logged out; clearing stale session and restarting for a new pairing.");
+        try {
+          fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+          fs.mkdirSync(SESSION_DIR, { recursive: true });
+        } catch (e) {
+          console.error("Could not reset WhatsApp session:", e.message);
+        }
+        setTimeout(() => startBot().catch(err => {
+          restarting = false;
+          console.error("WhatsApp restart failed:", err);
+        }), 1500);
       } else {
-        console.log(`WhatsApp logged out. Remove ${SESSION_DIR} and pair again.`);
+        console.log("WhatsApp connection closed; reconnecting...");
+        setTimeout(() => startBot().catch(err => console.error("WhatsApp reconnect failed:", err)), 3000);
       }
     }
   });
@@ -137,8 +152,7 @@ async function startBot() {
     }
   });
 }
-// DormHost expects an HTTP listener on PORT. These endpoints are health checks only;
-// WhatsApp and Telegram continue running as background connections in this process.
+// DormHost expects an HTTP listener on PORT. These endpoints are health checks only.
 const PORT = Number(process.env.PORT || 3000);
 const server = http.createServer((req, res) => {
   if (req.url === "/health" || req.url === "/") {
