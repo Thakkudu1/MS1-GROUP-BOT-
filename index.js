@@ -232,7 +232,6 @@ async function startBot() {
         const botIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === botJid && (p.admin === "admin" || p.admin === "superadmin"));
         const senderIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
         if (!botIsAdmin) { await reply("Please make the bot a group admin first."); continue; }
-        if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can use this command."); continue; }
         const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
         if (!target) { await reply("Mention a member to " + command + "."); continue; }
         const action = command === "kick" ? "remove" : command === "promote" ? "promote" : "demote";
@@ -265,14 +264,12 @@ async function startBot() {
         const botIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === botJid && (p.admin === "admin" || p.admin === "superadmin"));
         const senderIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
         if (!botIsAdmin) { await reply("Please make the bot an admin to use group mention features."); continue; }
-        if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can use this command."); continue; }
         const mentions = metadata.participants.map(p => p.id);
         const body = args.join(" ") || "Attention everyone!";
         await sock.sendMessage(chat, { text: `📢 ${body}\n\n` + mentions.map(j => "@" + senderNumber(j)).join(" "), mentions }, { quoted: msg });
       } else if (command === "warn" && isGroup(chat)) {
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
-        if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can warn members."); continue; }
         const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
         if (!target) { await reply(`Mention a member: ${PREFIX}warn @member`); continue; }
         const key = `${chat}:${target}`;
@@ -280,9 +277,6 @@ async function startBot() {
         WARNINGS.set(key, count);
         await reply(`⚠️ @${senderNumber(target)} warning ${count}/${WARN_LIMIT}.` + (count >= WARN_LIMIT ? "\nWarning limit reached. An admin should review this member." : ""));
       } else if (command === "warnings" && isGroup(chat)) {
-        const metadata = await sock.groupMetadata(chat).catch(() => null);
-        const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
-        if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can check warnings."); continue; }
         await reply("Warnings are stored in memory for this running session; persistent storage is not configured yet.");
       } else if (command) {
         await reply(`Unknown command. Send ${PREFIX}menu to see available commands.`);
