@@ -3,5 +3,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY . .
-RUN mkdir -p /app/session
+RUN mkdir -p /data/session
+EXPOSE 3000
 CMD ["npm", "start"]
