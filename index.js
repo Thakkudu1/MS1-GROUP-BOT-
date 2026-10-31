@@ -16,6 +16,12 @@ const OWNER_NUMBERS = (process.env.OWNER_NUMBERS || "")
   .split(",").map(x => x.replace(/\D/g, "")).filter(Boolean);
 const WARN_LIMIT = Number(process.env.WARN_LIMIT || 3);
 const WARNINGS = new Map();
+const GROUP_SETTINGS = new Map();
+const LAST_MESSAGES = new Map();
+function groupSettings(jid) {
+  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: false, antispam: false, welcome: true, rules: "No rules have been set yet." });
+  return GROUP_SETTINGS.get(jid);
+}
 const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
@@ -142,6 +148,17 @@ async function startBot() {
     }
   });
 
+  sock.ev.on("group-participants.update", async (event) => {
+    if (!groupSettings(event.id).welcome) return;
+    for (const participant of event.participants || []) {
+      if (event.action === "add") {
+        await sock.sendMessage(event.id, { text: "Welcome @" + senderNumber(participant) + "!", mentions: [participant] }).catch(() => {});
+      } else if (event.action === "remove") {
+        await sock.sendMessage(event.id, { text: "Goodbye @" + senderNumber(participant) + ".", mentions: [participant] }).catch(() => {});
+      }
+    }
+  });
+
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
     for (const msg of messages) {
@@ -164,11 +181,16 @@ async function startBot() {
 │ ${PREFIX}menu / ${PREFIX}help
 │ ${PREFIX}ping
 │ ${PREFIX}alive
-│ ${PREFIX}tagall (group admins)
-│ ${PREFIX}warn @user (group admins)
-│ ${PREFIX}warnings (group admins)
-│ ${PREFIX}owner
-╰ No forced channel join`
+│ ${PREFIX}tagall [message] (admins)
+│ ${PREFIX}kick @user / ${PREFIX}promote @user
+│ ${PREFIX}demote @user
+│ ${PREFIX}warn @user / ${PREFIX}warnings
+│ ${PREFIX}antilink on|off (admins)
+│ ${PREFIX}antispam on|off (admins)
+│ ${PREFIX}welcome on|off (admins)
+│ ${PREFIX}rules [text] (admins)
+│ ${PREFIX}ping / ${PREFIX}alive / ${PREFIX}owner
+╰ Settings reset when the bot restarts`
         );
       } else if (command === "ping") {
         await reply("Pong! 🟢 MS1 GROUP BOT is online.");
@@ -176,6 +198,39 @@ async function startBot() {
         await reply("🟢 MS1 GROUP BOT is running.");
       } else if (command === "owner") {
         await reply(OWNER_NUMBERS.length ? `Owner: ${OWNER_NUMBERS.map(n => "+" + n).join(", ")}` : "Owner number is not configured yet.");
+      } else if (["kick", "promote", "demote"].includes(command) && isGroup(chat)) {
+        const metadata = await sock.groupMetadata(chat).catch(() => null);
+        if (!metadata) { await reply("Could not read group information."); continue; }
+        const botJid = jidNormalizedUser(sock.user.id);
+        const botIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === botJid && (p.admin === "admin" || p.admin === "superadmin"));
+        const senderIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (!botIsAdmin) { await reply("Please make the bot a group admin first."); continue; }
+        if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can use this command."); continue; }
+        const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
+        if (!target) { await reply("Mention a member to " + command + "."); continue; }
+        const action = command === "kick" ? "remove" : command === "promote" ? "promote" : "demote";
+        try {
+          await sock.groupParticipantsUpdate(chat, [target], action);
+          await reply("Done: " + command + " for @" + senderNumber(target) + ".");
+        } catch (e) { await reply("Could not " + command + " that member. Check bot admin permissions."); }
+      } else if (["antilink", "antispam", "welcome"].includes(command) && isGroup(chat)) {
+        const metadata = await sock.groupMetadata(chat).catch(() => null);
+        const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can change settings."); continue; }
+        const value = args[0]?.toLowerCase();
+        if (!["on", "off"].includes(value)) { await reply("Usage: " + PREFIX + command + " on|off"); continue; }
+        groupSettings(chat)[command] = value === "on";
+        await reply(command + " is now " + value + " for this running session.");
+      } else if (command === "rules" && isGroup(chat)) {
+        const metadata = await sock.groupMetadata(chat).catch(() => null);
+        const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (args.length && !senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can change rules."); continue; }
+        if (args.length) {
+          groupSettings(chat).rules = args.join(" ");
+          await reply("Group rules updated for this running session.");
+        } else {
+          await reply("Group rules: " + groupSettings(chat).rules);
+        }
       } else if (command === "tagall" && isGroup(chat)) {
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         if (!metadata) { await reply("Could not read group information."); continue; }
