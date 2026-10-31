@@ -215,7 +215,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         );
         if (ownerMentioned) {
           await sock.sendMessage(chat, {
-            text: "😊 ഞാൻ ഇവിടെത്തന്നെയുണ്ട്! പറയൂ, എന്ത് വിശേഷങ്ങളാണ്? 💬❤️"
+            text: "🥰 എന്താ വിശേഷം, സുഖമല്ലേ? 💖 ഞാൻ ഇവിടെത്തന്നെയുണ്ട് ട്ടോ! 😊✨ പറയൂ, എന്താണ് വിശേഷങ്ങൾ? 💬💕"
           }, { quoted: msg }).catch(() => {});
         }
         const settings = groupSettings(chat);
