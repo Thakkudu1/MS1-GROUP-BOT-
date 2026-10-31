@@ -195,10 +195,10 @@ Stay connected, respect everyone, share positive vibes, and help make this group
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
     for (const msg of messages) {
-      if (!msg.message || msg.key.fromMe) continue;
+      if (!msg.message || (msg.key.fromMe && !getText(msg).trim().startsWith(PREFIX))) continue;
       const chat = msg.key.remoteJid;
       if (!chat || chat === "status@broadcast") continue;
-      const sender = msg.key.participant || chat;
+      const sender = msg.key.participant || (msg.key.fromMe ? sock.user?.id : chat);
       const text = getText(msg).trim();
       if (!text) continue;
 
