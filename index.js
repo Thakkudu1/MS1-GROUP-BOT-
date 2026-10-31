@@ -174,7 +174,20 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
         }
       } else if (event.action === "remove") {
-        await sock.sendMessage(event.id, { text: "👋 Goodbye @" + senderNumber(participant) + ". Wishing you all the best!", mentions: [participant] }).catch(() => {});
+        const goodbyeText = "😂 ഇറങ്ങിപ്പോടാ പുള്ളെ! 👋\n\n@" + senderNumber(participant) + " ഗ്രൂപ്പിൽ നിന്ന് പുറത്തുപോയി. 🚪";
+        let profilePicUrl = null;
+        try { profilePicUrl = await sock.profilePictureUrl(participant, "image"); } catch {}
+        if (profilePicUrl) {
+          await sock.sendMessage(event.id, {
+            image: { url: profilePicUrl },
+            caption: goodbyeText,
+            mentions: [participant]
+          }).catch(async () => {
+            await sock.sendMessage(event.id, { text: goodbyeText, mentions: [participant] }).catch(() => {});
+          });
+        } else {
+          await sock.sendMessage(event.id, { text: goodbyeText, mentions: [participant] }).catch(() => {});
+        }
       }
     }
   });
