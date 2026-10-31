@@ -25,13 +25,14 @@ Baileys ഒരു അനൗദ്യോഗിക WhatsApp Web ലൈബ്രറ
 
 Telegram ID അറിയാൻ ആദ്യമായി `TELEGRAM_OWNER_ID` താൽക്കാലികമായി ഒഴിഞ്ഞുവെച്ച് bot run ചെയ്തശേഷം Telegram bot-ലേക്ക് `/id` അയയ്ക്കാം. Bot മറുപടിയിൽ ID കാണിക്കും. ആ ID host-ൽ `TELEGRAM_OWNER_ID` ആയി ചേർത്ത് service restart ചെയ്യുക. Token ഇല്ലാതെ Telegram bot പ്രവർത്തിക്കില്ല.
 
-## 3. Deploy ചെയ്യുക
-1. Host-ൽ **Node.js 20+** runtime അല്ലെങ്കിൽ Docker തിരഞ്ഞെടുക്കുക.
-2. GitHub repository `Thakkudu1/MS1-GROUP-BOT-` connect ചെയ്യുക.
-3. Start command: `npm start` (Docker ഉപയോഗിക്കുന്നുവെങ്കിൽ repository-യിലെ Dockerfile ഉപയോഗിക്കാം).
-4. Environment variables ചേർക്കുക.
-5. `session/` ഫോൾഡറിന് persistent disk/storage ഉണ്ടെന്ന് ഉറപ്പാക്കുക. Persistent storage ഇല്ലെങ്കിൽ restart/deploy കഴിഞ്ഞ് WhatsApp വീണ്ടും pair ചെയ്യേണ്ടിവരാം.
-6. Service logs-ൽ bot start ആയെന്ന് ഉറപ്പാക്കുക.
+## 3. DormHost-ൽ Deploy ചെയ്യുക
+1. DormHost dashboard-ൽ `New app` അമർത്തുക.
+2. Name: `ms1-group-bot`; Plan: WhatsApp/Telegram bot തുടർച്ചയായി പ്രവർത്തിക്കാൻ `Awake` ആണ് അനുയോജ്യം; Region: `Mumbai, India`.
+3. GitHub repository `https://github.com/Thakkudu1/MS1-GROUP-BOT-` සහ branch `main` തിരഞ്ഞെടുക്കുക.
+4. `Subdirectory` ശൂന്യമായി വിടുക. Repository root-ലെ `Dockerfile` ഉപയോഗിച്ചാണ് build.
+5. `Create and deploy` അമർത്തിയശേഷം app-ന്റെ `Environment` വിഭാഗത്തിൽ ആവശ്യമായ variables ചേർക്കുക.
+6. App-ന് `PORT` ലഭിക്കും; `index.js` അതിൽ `0.0.0.0`-ൽ health endpoint തുറക്കും. WhatsApp session `/data/session`-ൽ സൂക്ഷിക്കും, അത് DormHost persistent storage ആണ്.
+7. `Live logs`-ൽ build വിജയിച്ചതും `Health server listening` / `Telegram control bot started` സന്ദേശങ്ങളും ഉണ്ടെന്ന് പരിശോധിക്കുക.
 
 ## 4. WhatsApp pairing code നേടുക
 1. Telegram bot-ൽ `/start` അയയ്ക്കുക.
