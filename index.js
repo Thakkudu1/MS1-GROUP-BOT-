@@ -200,6 +200,10 @@ async function startBot() {
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
+      if (command && !isOwner(sender)) {
+        await reply("Only the bot creator can use commands.");
+        continue;
+      }
 
       if (command === "menu" || command === "help") {
         await reply(
@@ -262,10 +266,6 @@ async function startBot() {
         if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         if (!metadata) { await reply("Could not read group information."); continue; }
-        const botJid = jidNormalizedUser(sock.user.id);
-        const botIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === botJid && (p.admin === "admin" || p.admin === "superadmin"));
-        const senderIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
-        if (!botIsAdmin) { await reply("Please make the bot an admin to use group mention features."); continue; }
         const mentions = metadata.participants.map(p => p.id);
         const body = args.join(" ") || "Attention everyone!";
         await sock.sendMessage(chat, { text: `📢 ${body}\n\n` + mentions.map(j => "@" + senderNumber(j)).join(" "), mentions }, { quoted: msg });
