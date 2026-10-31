@@ -248,21 +248,10 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
-      // Every WhatsApp command is restricted to the configured bot owner or a current
-      // group admin. In private chats, only the configured bot owner may use commands.
-      if (command) {
-        let senderIsGroupAdmin = false;
-        if (isGroup(chat)) {
-          const commandMetadata = await sock.groupMetadata(chat).catch(() => null);
-          senderIsGroupAdmin = Boolean(commandMetadata?.participants?.some(p =>
-            jidNormalizedUser(p.id) === jidNormalizedUser(sender) &&
-            (p.admin === "admin" || p.admin === "superadmin")
-          ));
-        }
-        if (!isOwner(sender) && !senderIsGroupAdmin) {
-          await reply("🔒 ഈ ബോട്ട് ഉപയോഗിക്കാൻ ബോട്ട് ഓണറോ ഗ്രൂപ്പ് അഡ്മിനോ ആയിരിക്കണം.");
-          continue;
-        }
+      // Owner-only command gate: no group admin or regular member may run commands.
+      if (command && !isOwner(sender)) {
+        await reply("🔒 ഈ കമാൻഡ് ഉപയോഗിക്കാൻ ബോട്ട് ഓണർക്ക് മാത്രം അനുവാദമുണ്ട്.");
+        continue;
       }
       if (command === "menu" || command === "help") {
         await reply(
