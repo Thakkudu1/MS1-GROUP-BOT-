@@ -203,6 +203,21 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!text) continue;
 
       if (isGroup(chat)) {
+        // Reply only when the configured bot owner is mentioned in a group.
+        const mentionedJids = [
+          ...(msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || []),
+          ...(msg.message?.imageMessage?.contextInfo?.mentionedJid || []),
+          ...(msg.message?.videoMessage?.contextInfo?.mentionedJid || []),
+          ...(msg.message?.documentMessage?.contextInfo?.mentionedJid || [])
+        ];
+        const ownerMentioned = OWNER_NUMBERS.some(ownerNumber =>
+          mentionedJids.some(jid => senderNumber(jid) === ownerNumber)
+        );
+        if (ownerMentioned) {
+          await sock.sendMessage(chat, {
+            text: "😊 ഞാൻ ഇവിടെത്തന്നെയുണ്ട്! പറയൂ, എന്ത് വിശേഷങ്ങളാണ്? 💬❤️"
+          }, { quoted: msg }).catch(() => {});
+        }
         const settings = groupSettings(chat);
         const now = Date.now();
         const spamKey = chat + ":" + sender;
