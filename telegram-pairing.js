@@ -31,12 +31,14 @@ function startTelegram(getSocket) {
     if (!sock) return bot.sendMessage(msg.chat.id, 'WhatsApp is starting. Wait a few seconds and send /pair again.');
     busy = true;
     try {
-      const code = await sock.requestPairingCode(number);
-      const pretty = String(code).match(/.{1,4}/g).join('-');
-      await bot.sendMessage(msg.chat.id, '🔐 MS1 GROUP BOT Pairing Code\n\n' + pretty + '\n\nWhatsApp → Linked devices → Link a device → Link with phone number instead. Enter this code there. Do not share it with anyone.');
+      const rawCode = String(await sock.requestPairingCode(number));
+      // Normalize first because Baileys versions may return a code already containing a hyphen.
+      const cleanCode = rawCode.replace(/[^A-Za-z0-9]/g, '');
+      const pretty = cleanCode.length === 8 ? cleanCode.slice(0, 4) + '-' + cleanCode.slice(4) : rawCode;
+      await bot.sendMessage(msg.chat.id, '🔐 MS1 GROUP BOT Pairing Code\n\n' + pretty + '\n\nWhatsApp → Linked devices → Link a device → Link with phone number instead. Enter this code promptly. Do not share it with anyone.');
     } catch (e) {
       console.error('Pairing code error:', e.message);
-      await bot.sendMessage(msg.chat.id, 'Could not get a pairing code. Check the WhatsApp number including country code and try again.');
+      await bot.sendMessage(msg.chat.id, 'Could not get a pairing code. Confirm the WhatsApp number including country code, then wait for WhatsApp to finish reconnecting before trying again.');
     } finally { busy = false; }
   });
   bot.on('polling_error', (e) => console.error('Telegram polling error:', e.message));
