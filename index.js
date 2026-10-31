@@ -14,6 +14,7 @@ const OWNER_NUMBERS = (process.env.OWNER_NUMBERS || "")
   .split(",").map(x => x.replace(/\D/g, "")).filter(Boolean);
 const WARN_LIMIT = Number(process.env.WARN_LIMIT || 3);
 const WARNINGS = new Map();
+let sock;
 
 function senderNumber(jid = "") {
   return jid.split("@")[0].split(":")[0].replace(/\D/g, "");
@@ -38,7 +39,7 @@ async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("./session");
   let version;
   try { ({ version } = await fetchLatestBaileysVersion()); } catch {}
-  const sock = makeWASocket({
+  sock = makeWASocket({
     version,
     auth: state,
     logger: pino({ level: process.env.LOG_LEVEL || "silent" }),
