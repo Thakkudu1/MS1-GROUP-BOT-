@@ -248,8 +248,22 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
-      // Public status/help commands remain available to everyone. Moderation
-      // commands enforce owner-or-current-group-admin authorization in their handlers.
+      // Every WhatsApp command is restricted to the configured bot owner or a current
+      // group admin. In private chats, only the configured bot owner may use commands.
+      if (command) {
+        let senderIsGroupAdmin = false;
+        if (isGroup(chat)) {
+          const commandMetadata = await sock.groupMetadata(chat).catch(() => null);
+          senderIsGroupAdmin = Boolean(commandMetadata?.participants?.some(p =>
+            jidNormalizedUser(p.id) === jidNormalizedUser(sender) &&
+            (p.admin === "admin" || p.admin === "superadmin")
+          ));
+        }
+        if (!isOwner(sender) && !senderIsGroupAdmin) {
+          await reply("🔒 ഈ ബോട്ട് ഉപയോഗിക്കാൻ ബോട്ട് ഓണറോ ഗ്രൂപ്പ് അഡ്മിനോ ആയിരിക്കണം.");
+          continue;
+        }
+      }
       if (command === "menu" || command === "help") {
         await reply(
 `╭─「 MS1 GROUP BOT 」
