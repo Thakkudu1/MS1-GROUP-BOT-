@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 
-function startTelegram(getSocket) {
+function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
   const token = process.env.TELEGRAM_BOT_TOKEN || '';
   const ownerId = String(process.env.TELEGRAM_OWNER_ID || '').trim();
   if (!token) {
@@ -27,10 +27,20 @@ function startTelegram(getSocket) {
     const number = msg.text.replace(/\D/g, '');
     if (!/^\d{10,15}$/.test(number)) return;
     if (busy) return bot.sendMessage(msg.chat.id, 'Pairing is already in progress. Please wait.');
-    const sock = getSocket();
+    let sock = getSocket();
     if (!sock) return bot.sendMessage(msg.chat.id, 'WhatsApp is starting. Wait a few seconds and send /pair again.');
+    if (sock.authState?.creds?.registered) {
+      return bot.sendMessage(msg.chat.id, 'WhatsApp already has a saved linked session. Wait for it to reconnect; do not request another pairing code yet.');
+    }
     busy = true;
     try {
+      // Baileys requires the socket to reach its QR/pairing-ready event first.
+      const ready = isPairingReady() || await waitForPairingReady(20000);
+      sock = getSocket();
+      if (!ready || !sock || sock.authState?.creds?.registered) {
+        await bot.sendMessage(msg.chat.id, 'WhatsApp is not ready for a pairing code yet. Wait for the bot to reconnect, then send /pair again.');
+        return;
+      }
       const rawCode = String(await sock.requestPairingCode(number));
       // Normalize first because Baileys versions may return a code already containing a hyphen.
       const cleanCode = rawCode.replace(/[^A-Za-z0-9]/g, '');
