@@ -15,10 +15,13 @@
 - ഇത് പൂർണമായ BLACK KING MD പകർപ്പല്ല; ലഭ്യമായ മെനു/ഫീച്ചറുകൾ കണ്ടറിഞ്ഞ് സമാനമായ ഫീച്ചറുകൾ സ്വതന്ത്രമായി ചേർക്കേണ്ടതാണ്.
 - WhatsApp Web-നെ നിയന്ത്രിക്കുന്ന Baileys പോലുള്ള അനൗദ്യോഗിക ലൈബ്രറികൾ ഉപയോഗിക്കുന്നത് WhatsApp നിബന്ധനകൾക്കും അക്കൗണ്ട് നിയന്ത്രണങ്ങൾക്കും വിധേയമാണ്. പ്രധാന WhatsApp അക്കൗണ്ടിന് പകരം പ്രത്യേകം നമ്പർ ഉപയോഗിക്കുന്നത് പരിഗണിക്കുക.
 - സൗജന്യ ഹോസ്റ്റിങ് സ്ഥിരമായിരിക്കണമെന്നില്ല. ബോട്ട് 24/7 പ്രവർത്തിക്കാൻ സ്ഥിരമായ Node.js പ്രോസസും `session/` ഫോൾഡറിന് persistent storage-ഉം വേണം.
-- QR കോഡ് ടെർമിനലിൽ പ്രത്യക്ഷപ്പെടും. WhatsApp > Linked devices > Link a device ഉപയോഗിച്ച് സ്കാൻ ചെയ്യണം. QR/സെഷൻ വിവരങ്ങൾ മറ്റാരുമായും പങ്കിടരുത്.
+- Telegram pairing-code സൗകര്യം: `TELEGRAM_BOT_TOKEN` (BotFather-ൽ നിന്നുള്ള രഹസ്യ token), `TELEGRAM_OWNER_ID` (നിങ്ങളുടെ Telegram numeric ID) environment variables സജ്ജമാക്കണം. തുടർന്ന് Telegram bot-ൽ `/start`, `/pair` അയച്ച് WhatsApp നമ്പർ country code സഹിതം നൽകുക. ലഭിക്കുന്ന pairing code WhatsApp > Linked devices > Link a device > Link with phone number instead എന്നിടത്ത് നൽകുക. Pairing code/token/session വിവരങ്ങൾ മറ്റാരുമായും പങ്കിടരുത്.
+- Telegram token-ийг GitHub-ൽ commit ചെയ്യരുത്; зөвхөн host-ийн environment variables-д оруулна.
 - **QR സ്കാൻ ചെയ്യുന്നത് വരെ ബോട്ട് കണക്റ്റ് ആവില്ല.** ChatGPT നിങ്ങളുടെ ഫോണിൽ നിന്ന് WhatsApp ലിങ്ക് ചെയ്യാനോ QR സ്വയം സ്കാൻ ചെയ്യാനോ കഴിയില്ല.
 
 ## ആവശ്യമായവ
+- Telegram bot token (BotFather വഴി)
+- Telegram owner numeric ID (`/id` കമാൻഡ് ഉപയോഗിച്ച് കണ്ടെത്താം; ആദ്യം `TELEGRAM_OWNER_ID` ക്രമീകരിക്കുന്നതിന് ഉടമയുടെ ID ആവശ്യമാണ്)
 - Node.js 20+
 - npm
 - സ്ഥിരമായി പ്രവർത്തിക്കുന്ന ഹോസ്റ്റ്
