@@ -56,6 +56,15 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
+    const statusCode = lastDisconnect?.error?.output?.statusCode;
+    if (connection || qr || lastDisconnect) {
+      console.log("WhatsApp connection update:", JSON.stringify({
+        connection: connection || "connecting",
+        hasPairingQR: Boolean(qr),
+        statusCode: statusCode || null,
+        error: lastDisconnect?.error?.message || null
+      }));
+    }
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
       console.log("\nScan this QR from WhatsApp > Linked devices:\n");
       qrcode.generate(qr, { small: true });
@@ -65,8 +74,7 @@ async function startBot() {
       console.log("MS1 GROUP BOT connected.");
     }
     if (connection === "close" && !restarting) {
-      const code = lastDisconnect?.error?.output?.statusCode;
-      if (code === DisconnectReason.loggedOut) {
+      if (statusCode === DisconnectReason.loggedOut) {
         restarting = true;
         console.log("WhatsApp logged out; clearing stale session and restarting for a new pairing.");
         try {
