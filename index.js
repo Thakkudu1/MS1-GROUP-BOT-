@@ -216,12 +216,25 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           mentionedJids.some(jid => senderNumber(jid) === ownerNumber) ||
           (ownerNumber.length >= 10 && textDigits.includes(ownerNumber))
         );
-        // Also trigger when the owner's name is typed/mentioned in the group.
-        const ownerNameMentioned = /\\b(?:ashik(?:\\s+abbas)?|abbas)\\b/i.test(text);
+        // Match the owner's WhatsApp profile/contact name from group metadata as well.
+        let groupMetadataForMentions = null;
+        if (isGroup(chat)) {
+          groupMetadataForMentions = await sock.groupMetadata(chat).catch(() => null);
+        }
+        const ownerParticipants = (groupMetadataForMentions?.participants || []).filter(p =>
+          OWNER_NUMBERS.includes(senderNumber(p.id)) ||
+          OWNER_NUMBERS.includes(senderNumber(p.phoneNumber || ""))
+        );
+        const ownerNames = ownerParticipants
+          .flatMap(p => [p.notify, p.name, p.verifiedName, p.pushName])
+          .filter(name => typeof name === "string" && name.trim().length >= 2)
+          .map(name => name.trim().toLocaleLowerCase());
+        const normalizedText = text.toLocaleLowerCase();
+        const ownerNameMentioned = ownerNames.some(name => normalizedText.includes(name));
         const explicitAllMention = /@everyone|@all|all mention|ഓൾ മെൻഷൻ/i.test(text);
         let allGroupMembersMentioned = false;
         if (isGroup(chat) && mentionedJids.length > 1) {
-          const metadata = await sock.groupMetadata(chat).catch(() => null);
+          const metadata = groupMetadataForMentions;
           allGroupMembersMentioned = Boolean(metadata &&
             mentionedJids.length >= Math.max(2, metadata.participants.length - 1));
         }
