@@ -22,6 +22,8 @@ let sock;
 let restarting = false;
 let pairingReady = false;
 let pairingReadyWaiters = [];
+let latestQr = null;
+let qrWaiters = [];
 
 function waitForPairingReady(timeoutMs = 20000) {
   if (pairingReady) return Promise.resolve(true);
@@ -34,6 +36,28 @@ function waitForPairingReady(timeoutMs = 20000) {
     pairingReadyWaiters.push(waiter);
   });
 }
+function waitForQr(timeoutMs = 20000) {
+  if (latestQr) return Promise.resolve(latestQr);
+  return new Promise(resolve => {
+    const waiter = { resolve, timer: null };
+    waiter.timer = setTimeout(() => {
+      qrWaiters = qrWaiters.filter(item => item !== waiter);
+      resolve(null);
+    }, timeoutMs);
+    qrWaiters.push(waiter);
+  });
+}
+function publishQr(qr) {
+  latestQr = qr;
+  const waiters = qrWaiters;
+  qrWaiters = [];
+  for (const waiter of waiters) {
+    clearTimeout(waiter.timer);
+    waiter.resolve(qr);
+  }
+}
+function clearQr() { latestQr = null; }
+
 function markPairingReady() {
   pairingReady = true;
   const waiters = pairingReadyWaiters;
@@ -87,8 +111,8 @@ async function startBot() {
         " qr=" + Boolean(qr) +
         " error=" + String(lastDisconnect?.error?.message || "-").slice(0, 140));
     }
-    if (qr) markPairingReady();
-    if (connection === "open" || connection === "close") pairingReady = false;
+    if (qr) { markPairingReady(); publishQr(qr); }
+    if (connection === "open" || connection === "close") { pairingReady = false; clearQr(); }
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
       console.log("\nScan this QR from WhatsApp > Linked devices:\n");
       qrcode.generate(qr, { small: true });
@@ -197,5 +221,5 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
-startTelegram(() => sock, () => pairingReady, waitForPairingReady);
+startTelegram(() => sock, () => pairingReady, waitForPairingReady, () => latestQr, waitForQr);
 startBot().catch(err => { console.error("Bot failed to start:", err); process.exit(1); });
