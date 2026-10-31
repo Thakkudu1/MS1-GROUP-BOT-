@@ -7,7 +7,6 @@ const {
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const fs = require("fs");
-const path = require("path");
 const http = require("http");
 const qrcode = require("qrcode-terminal");
 const { startTelegram } = require("./telegram-pairing");
@@ -144,11 +143,11 @@ const PORT = Number(process.env.PORT || 3000);
 const server = http.createServer((req, res) => {
   if (req.url === "/health" || req.url === "/") {
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-    res.end("MS1 GROUP BOT is running\\n");
+    res.end("MS1 GROUP BOT is running\n");
     return;
   }
   res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-  res.end("Not found\\n");
+  res.end("Not found\n");
 });
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
