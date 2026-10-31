@@ -7,7 +7,7 @@ const {
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 const qrcode = require("qrcode-terminal");
-const fs = require("fs");
+const { startTelegram } = require("./telegram-pairing");
 
 const PREFIX = process.env.PREFIX || ".";
 const OWNER_NUMBERS = (process.env.OWNER_NUMBERS || "")
@@ -50,7 +50,7 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
+    if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
       console.log("\nScan this QR from WhatsApp > Linked devices:\n");
       qrcode.generate(qr, { small: true });
     }
@@ -132,4 +132,5 @@ async function startBot() {
     }
   });
 }
+startTelegram(() => sock);
 startBot().catch(err => { console.error("Bot failed to start:", err); process.exit(1); });
