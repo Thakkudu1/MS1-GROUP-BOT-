@@ -1,39 +1,46 @@
 # MS1 GROUP BOT — മലയാളം
 
-ഈ പ്രോജക്റ്റ് WhatsApp ഗ്രൂപ്പുകളിലും സ്വകാര്യ ചാറ്റിലും പ്രവർത്തിക്കാൻ തയ്യാറാക്കിയ **starter** ആണ്. നിർബന്ധിത Telegram/WhatsApp ചാനൽ ജോയിൻ ഇല്ല.
+ഈ repository-ൽ Telegram വഴി നിയന്ത്രിച്ച് WhatsApp pairing code നൽകുന്ന Node.js bot starter ഉണ്ട്.
 
-## ഇപ്പോൾ ഉള്ള കമാൻഡുകൾ
-- `.menu` / `.help`
-- `.ping`
-- `.alive`
-- `.owner`
-- `.tagall` — ഗ്രൂപ്പിൽ, ബോട്ട് അഡ്മിൻ ആയിരിക്കുമ്പോൾ; ഗ്രൂപ്പ് അഡ്മിൻ/ഉടമയ്ക്ക് മാത്രം
-- `.warn @member` — അഡ്മിൻ/ഉടമയ്ക്ക് മാത്രം
-- `.warnings` — അടിസ്ഥാന warning കമാൻഡ്
+## കമാൻഡുകൾ
+- Telegram: `/start`, `/id`, `/pair`
+- WhatsApp: `.menu`, `.ping`, `.alive`, `.owner`, `.tagall`, `.warn @member`, `.warnings`
 
-## പ്രധാന കുറിപ്പുകൾ
-- ഇത് പൂർണമായ BLACK KING MD പകർപ്പല്ല; ലഭ്യമായ മെനു/ഫീച്ചറുകൾ കണ്ടറിഞ്ഞ് സമാനമായ ഫീച്ചറുകൾ സ്വതന്ത്രമായി ചേർക്കേണ്ടതാണ്.
-- WhatsApp Web-നെ നിയന്ത്രിക്കുന്ന Baileys പോലുള്ള അനൗദ്യോഗിക ലൈബ്രറികൾ ഉപയോഗിക്കുന്നത് WhatsApp നിബന്ധനകൾക്കും അക്കൗണ്ട് നിയന്ത്രണങ്ങൾക്കും വിധേയമാണ്. പ്രധാന WhatsApp അക്കൗണ്ടിന് പകരം പ്രത്യേകം നമ്പർ ഉപയോഗിക്കുന്നത് പരിഗണിക്കുക.
-- സൗജന്യ ഹോസ്റ്റിങ് സ്ഥിരമായിരിക്കണമെന്നില്ല. ബോട്ട് 24/7 പ്രവർത്തിക്കാൻ സ്ഥിരമായ Node.js പ്രോസസും `session/` ഫോൾഡറിന് persistent storage-ഉം വേണം.
-- Telegram pairing-code സൗകര്യം: `TELEGRAM_BOT_TOKEN` (BotFather-ൽ നിന്നുള്ള രഹസ്യ token), `TELEGRAM_OWNER_ID` (നിങ്ങളുടെ Telegram numeric ID) environment variables സജ്ജമാക്കണം. തുടർന്ന് Telegram bot-ൽ `/start`, `/pair` അയച്ച് WhatsApp നമ്പർ country code സഹിതം നൽകുക. ലഭിക്കുന്ന pairing code WhatsApp > Linked devices > Link a device > Link with phone number instead എന്നിടത്ത് നൽകുക. Pairing code/token/session വിവരങ്ങൾ മറ്റാരുമായും പങ്കിടരുത്.
-- Telegram token-ийг GitHub-ൽ commit ചെയ്യരുത്; зөвхөн host-ийн environment variables-д оруулна.
-- **QR സ്കാൻ ചെയ്യുന്നത് വരെ ബോട്ട് കണക്റ്റ് ആവില്ല.** ChatGPT നിങ്ങളുടെ ഫോണിൽ നിന്ന് WhatsApp ലിങ്ക് ചെയ്യാനോ QR സ്വയം സ്കാൻ ചെയ്യാനോ കഴിയില്ല.
+## പ്രധാന സുരക്ഷാ മുന്നറിയിപ്പ്
+Baileys ഒരു അനൗദ്യോഗിക WhatsApp Web ലൈബ്രറിയാണ്. WhatsApp നിയന്ത്രണങ്ങൾ/അക്കൗണ്ട് നിയന്ത്രണം ഉണ്ടാകാം. കഴിയുമെങ്കിൽ പ്രത്യേകം നമ്പർ ഉപയോഗിക്കുക. Telegram bot token, WhatsApp session files എന്നിവ രഹസ്യമാണ്; ഇവ GitHub-ൽ ഇടരുത്, മറ്റൊരാൾക്കും അയക്കരുത്.
 
-## ആവശ്യമായവ
-- Telegram bot token (BotFather വഴി)
-- Telegram owner numeric ID (`/id` കമാൻഡ് ഉപയോഗിച്ച് കണ്ടെത്താം; ആദ്യം `TELEGRAM_OWNER_ID` ക്രമീകരിക്കുന്നതിന് ഉടമയുടെ ID ആവശ്യമാണ്)
-- Node.js 20+
-- npm
-- സ്ഥിരമായി പ്രവർത്തിക്കുന്ന ഹോസ്റ്റ്
-- WhatsApp അക്കൗണ്ട്
+## 1. Telegram bot സൃഷ്ടിക്കുക
+1. Telegram-ൽ ഔദ്യോഗിക `@BotFather` തുറക്കുക.
+2. `/newbot` അയച്ച് bot name ആയി `MS1 GROUP BOT` നൽകുക.
+3. username ചോദിക്കുമ്പോൾ ലഭ്യമായ ഒരു username നൽകുക (അവസാനം `bot` വരണം).
+4. BotFather നൽകുന്ന token സ്വകാര്യമായി സൂക്ഷിക്കുക. GitHub-ൽ പോസ്റ്റ് ചെയ്യരുത്.
 
-## കമ്പ്യൂട്ടറിൽ പ്രാദേശികമായി പ്രവർത്തിപ്പിക്കൽ
-1. ZIP extract ചെയ്യുക.
-2. ടെർമിനലിൽ പ്രോജക്റ്റ് ഫോൾഡറിലേക്ക് പോകുക.
-3. `npm install`
-4. `.env.example` പകർത്തി `.env` ആക്കുക; `OWNER_NUMBERS`-ൽ നിങ്ങളുടെ നമ്പർ country code സഹിതം ചേർക്കുക.
-5. `npm start`
-6. ടെർമിനലിലെ QR WhatsApp > Linked devices-ൽ സ്കാൻ ചെയ്യുക.
+## 2. ഹോസ്റ്റിൽ Environment Variables ചേർക്കുക
+ഈ variables host-ന്റെ Environment/Secrets വിഭാഗത്തിൽ ചേർക്കുക:
+- `TELEGRAM_BOT_TOKEN` = BotFather token
+- `TELEGRAM_OWNER_ID` = നിങ്ങളുടെ numeric Telegram ID
+- `OWNER_NUMBERS` = നിങ്ങളുടെ WhatsApp നമ്പർ country code സഹിതം, digits മാത്രം (ഉദാ. `919876543210`)
+- `PREFIX` = `.`
+- `WARN_LIMIT` = `3`
 
-## സുരക്ഷ
-`session/` ഫോൾഡർ രഹസ്യമാണ്. GitHub-ലേക്ക് അപ്‌ലോഡ് ചെയ്യരുത്. `.gitignore` അതിനെ ഒഴിവാക്കുന്നു.
+Telegram ID അറിയാൻ ആദ്യമായി `TELEGRAM_OWNER_ID` താൽക്കാലികമായി ഒഴിഞ്ഞുവെച്ച് bot run ചെയ്തശേഷം Telegram bot-ലേക്ക് `/id` അയയ്ക്കാം. Bot മറുപടിയിൽ ID കാണിക്കും. ആ ID host-ൽ `TELEGRAM_OWNER_ID` ആയി ചേർത്ത് service restart ചെയ്യുക. Token ഇല്ലാതെ Telegram bot പ്രവർത്തിക്കില്ല.
+
+## 3. Deploy ചെയ്യുക
+1. Host-ൽ **Node.js 20+** runtime അല്ലെങ്കിൽ Docker തിരഞ്ഞെടുക്കുക.
+2. GitHub repository `Thakkudu1/MS1-GROUP-BOT-` connect ചെയ്യുക.
+3. Start command: `npm start` (Docker ഉപയോഗിക്കുന്നുവെങ്കിൽ repository-യിലെ Dockerfile ഉപയോഗിക്കാം).
+4. Environment variables ചേർക്കുക.
+5. `session/` ഫോൾഡറിന് persistent disk/storage ഉണ്ടെന്ന് ഉറപ്പാക്കുക. Persistent storage ഇല്ലെങ്കിൽ restart/deploy കഴിഞ്ഞ് WhatsApp വീണ്ടും pair ചെയ്യേണ്ടിവരാം.
+6. Service logs-ൽ bot start ആയെന്ന് ഉറപ്പാക്കുക.
+
+## 4. WhatsApp pairing code നേടുക
+1. Telegram bot-ൽ `/start` അയയ്ക്കുക.
+2. `/pair` അയയ്ക്കുക.
+3. WhatsApp നമ്പർ country code സഹിതം digits മാത്രം അയയ്ക്കുക (ഉദാ. `919876543210`).
+4. Telegram-ൽ ലഭിക്കുന്ന pairing code സ്വകാര്യമായി സൂക്ഷിക്കുക.
+5. WhatsApp തുറക്കുക → **Linked devices** → **Link a device** → **Link with phone number instead** → Telegram-ൽ ലഭിച്ച code നൽകുക.
+
+Pairing code/token/session മറ്റാരുമായും പങ്കിടരുത്. ChatGPT-ക്ക് നിങ്ങളുടെ WhatsApp-ൽ നേരിട്ട് pairing പൂർത്തിയാക്കാൻ കഴിയില്ല.
+
+## നിലവിലെ പരിധികൾ
+ഇത് ഒരു starter ആണ്; എല്ലാ advanced group moderation ഫീച്ചറുകളും ഇപ്പോൾ ഇല്ല. Warning counter നിലവിൽ memory-ൽ മാത്രമാണ്. സൗജന്യ host ഉറക്കം/റീസ്റ്റാർട്ട്/ഡാറ്റാ പരിധികൾ ഏർപ്പെടുത്താം; 24/7 പ്രവർത്തനം ഉറപ്പല്ല. WhatsApp-ന്റെ ഔദ്യോഗികമായി പിന്തുണയ്ക്കുന്ന മാർഗങ്ങൾ ഉപയോഗിക്കുന്നത് കൂടുതൽ സുരക്ഷിതമാണ്.
