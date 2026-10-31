@@ -169,6 +169,33 @@ async function startBot() {
       const text = getText(msg).trim();
       if (!text) continue;
 
+      if (isGroup(chat)) {
+        const settings = groupSettings(chat);
+        const now = Date.now();
+        const spamKey = chat + ":" + sender;
+        const prior = LAST_MESSAGES.get(spamKey) || { time: 0, count: 0 };
+        const recent = now - prior.time < 5000;
+        LAST_MESSAGES.set(spamKey, { time: now, count: recent ? prior.count + 1 : 1 });
+        if (settings.antispam && recent && prior.count >= 4) {
+          const meta = await sock.groupMetadata(chat).catch(() => null);
+          const senderAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+          if (!senderAdmin && !isOwner(sender)) {
+            await sock.sendMessage(chat, { text: "⚠️ Please slow down; anti-spam is enabled." }, { quoted: msg }).catch(() => {});
+            continue;
+          }
+        }
+        if (settings.antilink && /https?:\/\/|www\.|chat\.whatsapp\.com\//i.test(text)) {
+          const meta = await sock.groupMetadata(chat).catch(() => null);
+          const senderAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+          if (!senderAdmin && !isOwner(sender)) {
+            const botAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sock.user.id) && (p.admin === "admin" || p.admin === "superadmin"));
+            if (botAdmin) await sock.sendMessage(chat, { delete: msg.key }).catch(() => {});
+            await sock.sendMessage(chat, { text: "🔗 Links are not allowed in this group." }).catch(() => {});
+            continue;
+          }
+        }
+      }
+
       const reply = (body) => sock.sendMessage(chat, { text: body }, { quoted: msg });
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
