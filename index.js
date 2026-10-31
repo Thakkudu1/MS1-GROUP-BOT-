@@ -6,6 +6,9 @@ const {
   jidNormalizedUser
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
+const fs = require("fs");
+const path = require("path");
+const http = require("http");
 const qrcode = require("qrcode-terminal");
 const { startTelegram } = require("./telegram-pairing");
 
@@ -14,6 +17,8 @@ const OWNER_NUMBERS = (process.env.OWNER_NUMBERS || "")
   .split(",").map(x => x.replace(/\D/g, "")).filter(Boolean);
 const WARN_LIMIT = Number(process.env.WARN_LIMIT || 3);
 const WARNINGS = new Map();
+const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
+fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
 
 function senderNumber(jid = "") {
@@ -36,7 +41,7 @@ function getText(msg) {
     "";
 }
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("./session");
+  const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   let version;
   try { ({ version } = await fetchLatestBaileysVersion()); } catch {}
   sock = makeWASocket({
@@ -62,7 +67,7 @@ async function startBot() {
         console.log("Connection closed; reconnecting...");
         setTimeout(startBot, 3000);
       } else {
-        console.log("WhatsApp logged out. Remove ./session and pair again.");
+        console.log(`WhatsApp logged out. Remove ${SESSION_DIR} and pair again.`);
       }
     }
   });
@@ -133,5 +138,19 @@ async function startBot() {
     }
   });
 }
+// DormHost expects an HTTP listener on PORT. These endpoints are health checks only;
+// WhatsApp and Telegram continue running as background connections in this process.
+const PORT = Number(process.env.PORT || 3000);
+const server = http.createServer((req, res) => {
+  if (req.url === "/health" || req.url === "/") {
+    res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+    res.end("MS1 GROUP BOT is running\\n");
+    return;
+  }
+  res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+  res.end("Not found\\n");
+});
+server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
+
 startTelegram(() => sock);
 startBot().catch(err => { console.error("Bot failed to start:", err); process.exit(1); });
