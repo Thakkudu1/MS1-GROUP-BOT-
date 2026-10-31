@@ -226,6 +226,7 @@ async function startBot() {
       } else if (command === "owner") {
         await reply(OWNER_NUMBERS.length ? `Owner: ${OWNER_NUMBERS.map(n => "+" + n).join(", ")}` : "Owner number is not configured yet.");
       } else if (["kick", "promote", "demote"].includes(command) && isGroup(chat)) {
+        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         if (!metadata) { await reply("Could not read group information."); continue; }
         const botJid = jidNormalizedUser(sock.user.id);
@@ -258,6 +259,7 @@ async function startBot() {
           await reply("Group rules: " + groupSettings(chat).rules);
         }
       } else if (command === "tagall" && isGroup(chat)) {
+        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         if (!metadata) { await reply("Could not read group information."); continue; }
         const botJid = jidNormalizedUser(sock.user.id);
@@ -268,6 +270,7 @@ async function startBot() {
         const body = args.join(" ") || "Attention everyone!";
         await sock.sendMessage(chat, { text: `📢 ${body}\n\n` + mentions.map(j => "@" + senderNumber(j)).join(" "), mentions }, { quoted: msg });
       } else if (command === "warn" && isGroup(chat)) {
+        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
         const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
@@ -277,6 +280,7 @@ async function startBot() {
         WARNINGS.set(key, count);
         await reply(`⚠️ @${senderNumber(target)} warning ${count}/${WARN_LIMIT}.` + (count >= WARN_LIMIT ? "\nWarning limit reached. An admin should review this member." : ""));
       } else if (command === "warnings" && isGroup(chat)) {
+        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         await reply("Warnings are stored in memory for this running session; persistent storage is not configured yet.");
       } else if (command) {
         await reply(`Unknown command. Send ${PREFIX}menu to see available commands.`);
