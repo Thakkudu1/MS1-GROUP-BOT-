@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
+const QRCode = require('qrcode');
 
-function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
+function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurrentQr, waitForQr) {
   const token = process.env.TELEGRAM_BOT_TOKEN || '';
   const ownerId = String(process.env.TELEGRAM_OWNER_ID || '').trim();
   if (!token) {
@@ -15,9 +16,28 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
       await bot.sendMessage(msg.chat.id, 'MS1 GROUP BOT\nYour Telegram ID: ' + String(msg.from && msg.from.id || '') + '\nAsk the owner to set TELEGRAM_OWNER_ID to this ID.');
       return;
     }
-    await bot.sendMessage(msg.chat.id, '👑 MS1 GROUP BOT\n\nTap /pair to link WhatsApp using a pairing code.');
+    await bot.sendMessage(msg.chat.id, '👑 MS1 GROUP BOT\n\nSend /qr to receive a WhatsApp QR image, or /pair to use a pairing code.');
   });
   bot.onText(/^\/id$/, async (msg) => bot.sendMessage(msg.chat.id, 'Telegram ID: ' + String(msg.from && msg.from.id || '')));
+  bot.onText(/^\/qr$/, async (msg) => {
+    if (!authorized(msg)) return bot.sendMessage(msg.chat.id, 'Not authorized.');
+    try {
+      let qr = getCurrentQr();
+      if (!qr) qr = await waitForQr(20000);
+      if (!qr) {
+        await bot.sendMessage(msg.chat.id, 'WhatsApp QR is not ready yet. Wait for the bot to reconnect, then send /qr again.');
+        return;
+      }
+      const image = await QRCode.toBuffer(qr, { type: 'png', width: 700, margin: 2 });
+      await bot.sendPhoto(msg.chat.id, image, {
+        caption: 'MS1 GROUP BOT — WhatsApp QR\nOpen WhatsApp on the phone you want to link → Linked devices → Link a device, then scan this QR from another screen. Do not share this QR.'
+      });
+    } catch (e) {
+      console.error('QR send error:', e.message);
+      await bot.sendMessage(msg.chat.id, 'Could not send the QR image. Please try /qr again in a few seconds.');
+    }
+  });
+
   bot.onText(/^\/pair$/, async (msg) => {
     if (!authorized(msg)) return bot.sendMessage(msg.chat.id, 'Not authorized. Use /id and ask the owner to configure TELEGRAM_OWNER_ID.');
     await bot.sendMessage(msg.chat.id, 'Send your WhatsApp phone number with country code (digits only, e.g. 919876543210).');
