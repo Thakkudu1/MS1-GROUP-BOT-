@@ -248,11 +248,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
-      if (command && !isOwner(sender)) {
-        await reply("Only the bot creator can use commands.");
-        continue;
-      }
-
+      // Public status/help commands remain available to everyone. Moderation
+      // commands enforce owner-or-current-group-admin authorization in their handlers.
       if (command === "menu" || command === "help") {
         await reply(
 `╭─「 MS1 GROUP BOT 」
@@ -260,9 +257,9 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}menu / ${PREFIX}help
 │ ${PREFIX}ping
 │ ${PREFIX}alive
-│ ${PREFIX}tagall [message] (admins)
-│ ${PREFIX}kick @user / ${PREFIX}promote @user
-│ ${PREFIX}demote @user
+│ ${PREFIX}tagall [message] (owner/admins)
+│ ${PREFIX}kick @user / ${PREFIX}promote @user (owner/admins)
+│ ${PREFIX}demote @user (owner/admins)
 │ ${PREFIX}warn @user / ${PREFIX}warnings
 │ ${PREFIX}antilink on|off (admins)
 │ ${PREFIX}antispam on|off (admins)
@@ -277,13 +274,14 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         await reply("🟢 MS1 GROUP BOT is running.");
       } else if (command === "owner") {
         await reply(OWNER_NUMBERS.length ? `Owner: ${OWNER_NUMBERS.map(n => "+" + n).join(", ")}` : "Owner number is not configured yet.");
-      } else if (["kick", "promote", "demote"].includes(command) && isGroup(chat)) {
-        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
+      } else if (["kick", "promote", "demote"].includes(command)) {
+        if (!isGroup(chat)) { await reply("This command works only in a group."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         if (!metadata) { await reply("Could not read group information."); continue; }
         const botJid = jidNormalizedUser(sock.user.id);
         const botIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === botJid && (p.admin === "admin" || p.admin === "superadmin"));
         const senderIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (!isOwner(sender) && !senderIsAdmin) { await reply("Only the bot owner or a group admin can use this command."); continue; }
         if (!botIsAdmin) { await reply("Please make the bot a group admin first."); continue; }
         const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
         if (!target) { await reply("Mention a member to " + command + "."); continue; }
@@ -311,16 +309,17 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           await reply("Group rules: " + groupSettings(chat).rules);
         }
       } else if (command === "tagall" && isGroup(chat)) {
-        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         if (!metadata) { await reply("Could not read group information."); continue; }
+        const senderIsAdmin = metadata.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (!isOwner(sender) && !senderIsAdmin) { await reply("Only the bot owner or a group admin can use this command."); continue; }
         const mentions = metadata.participants.map(p => p.id);
         const body = args.join(" ") || "Attention everyone!";
         await sock.sendMessage(chat, { text: `📢 ${body}\n\n` + mentions.map(j => "@" + senderNumber(j)).join(" "), mentions }, { quoted: msg });
       } else if (command === "warn" && isGroup(chat)) {
-        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (!isOwner(sender) && !senderIsAdmin) { await reply("Only the bot owner or a group admin can use this command."); continue; }
         const target = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.[0];
         if (!target) { await reply(`Mention a member: ${PREFIX}warn @member`); continue; }
         const key = `${chat}:${target}`;
@@ -328,7 +327,9 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         WARNINGS.set(key, count);
         await reply(`⚠️ @${senderNumber(target)} warning ${count}/${WARN_LIMIT}.` + (count >= WARN_LIMIT ? "\nWarning limit reached. An admin should review this member." : ""));
       } else if (command === "warnings" && isGroup(chat)) {
-        if (!isOwner(sender)) { await reply("Only the bot creator can use this command."); continue; }
+        const metadata = await sock.groupMetadata(chat).catch(() => null);
+        const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+        if (!isOwner(sender) && !senderIsAdmin) { await reply("Only the bot owner or a group admin can use this command."); continue; }
         await reply("Warnings are stored in memory for this running session; persistent storage is not configured yet.");
       } else if (command) {
         await reply(`Unknown command. Send ${PREFIX}menu to see available commands.`);
