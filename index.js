@@ -152,9 +152,21 @@ async function startBot() {
     if (!groupSettings(event.id).welcome) return;
     for (const participant of event.participants || []) {
       if (event.action === "add") {
-        await sock.sendMessage(event.id, { text: "Welcome @" + senderNumber(participant) + "!", mentions: [participant] }).catch(() => {});
+        const welcomeText = `📢✨ *A WARM WELCOME!* ✨📢
+
+🌟 Welcome to our group, @${senderNumber(participant)}! 🌟 ❤️🤝
+
+We're happy to have you here! 😊🔥
+Stay connected, respect everyone, share positive vibes, and help make this group amazing.
+
+💬 *Your presence matters. Let's make great memories together!* 💯❤️
+
+━━━━━━━━━━━━━━
+💖 *BEST WISHES FROM MS1 GROUP!* 💖
+━━━━━━━━━━━━━━`;
+        await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
       } else if (event.action === "remove") {
-        await sock.sendMessage(event.id, { text: "Goodbye @" + senderNumber(participant) + ".", mentions: [participant] }).catch(() => {});
+        await sock.sendMessage(event.id, { text: "👋 Goodbye @" + senderNumber(participant) + ". Wishing you all the best!", mentions: [participant] }).catch(() => {});
       }
     }
   });
