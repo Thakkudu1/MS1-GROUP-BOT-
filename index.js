@@ -203,7 +203,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!text) continue;
 
       if (isGroup(chat)) {
-        // Reply when the configured owner's number is mentioned in a group.
+        // Reply when the owner is mentioned, or when the group is all-mentioned/tagged.
         const mentionedJids = [
           ...(msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || []),
           ...(msg.message?.imageMessage?.contextInfo?.mentionedJid || []),
@@ -211,18 +211,19 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           ...(msg.message?.documentMessage?.contextInfo?.mentionedJid || []),
           ...(msg.message?.messageContextInfo?.mentionedJid || [])
         ];
-        // WhatsApp may represent mentioned contacts with LID JIDs instead of phone-number JIDs.
-        const ownerMentioned = await Promise.all(mentionedJids.map(async jid => {
-          let number = senderNumber(jid);
-          if (jid.endsWith("@lid")) {
-            try {
-              const pnJid = await sock.signalRepository?.lidMapping?.getPNForLID(jid);
-              if (pnJid) number = senderNumber(pnJid);
-            } catch {}
-          }
-          return OWNER_NUMBERS.includes(number);
-        })).then(matches => matches.some(Boolean));
-        if (ownerMentioned) {
+        const textDigits = text.replace(/\\D/g, "");
+        const ownerMentioned = OWNER_NUMBERS.some(ownerNumber =>
+          mentionedJids.some(jid => senderNumber(jid) === ownerNumber) ||
+          (ownerNumber.length >= 10 && textDigits.includes(ownerNumber))
+        );
+        const explicitAllMention = /@everyone|@all|all mention|ഓൾ മെൻഷൻ/i.test(text);
+        let allGroupMembersMentioned = false;
+        if (isGroup(chat) && mentionedJids.length > 1) {
+          const metadata = await sock.groupMetadata(chat).catch(() => null);
+          allGroupMembersMentioned = Boolean(metadata &&
+            mentionedJids.length >= Math.max(2, metadata.participants.length - 1));
+        }
+        if (ownerMentioned || explicitAllMention || allGroupMembersMentioned) {
           await sock.sendMessage(chat, {
             text: "🥰 എന്താ വിശേഷം, സുഖമല്ലേ? 💖 ഞാൻ ഇവിടെത്തന്നെയുണ്ട് ട്ടോ! 😊✨ പറയൂ, എന്താണ് വിശേഷങ്ങൾ? 💬💕"
           }, { quoted: msg }).catch(() => {});
