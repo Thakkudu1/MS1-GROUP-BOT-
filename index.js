@@ -216,6 +216,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           mentionedJids.some(jid => senderNumber(jid) === ownerNumber) ||
           (ownerNumber.length >= 10 && textDigits.includes(ownerNumber))
         );
+        // Also trigger when the owner's name is typed/mentioned in the group.
+        const ownerNameMentioned = /\\b(?:ashik(?:\\s+abbas)?|abbas)\\b/i.test(text);
         const explicitAllMention = /@everyone|@all|all mention|ഓൾ മെൻഷൻ/i.test(text);
         let allGroupMembersMentioned = false;
         if (isGroup(chat) && mentionedJids.length > 1) {
@@ -223,7 +225,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           allGroupMembersMentioned = Boolean(metadata &&
             mentionedJids.length >= Math.max(2, metadata.participants.length - 1));
         }
-        if (ownerMentioned || explicitAllMention || allGroupMembersMentioned) {
+        if (ownerMentioned || ownerNameMentioned || explicitAllMention || allGroupMembersMentioned) {
           await sock.sendMessage(chat, {
             text: "🥰 എന്താ വിശേഷം, സുഖമല്ലേ? 💖 ഞാൻ ഇവിടെത്തന്നെയുണ്ട് ട്ടോ! 😊✨ പറയൂ, എന്താണ് വിശേഷങ്ങൾ? 💬💕"
           }, { quoted: msg }).catch(() => {});
