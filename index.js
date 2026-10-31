@@ -58,12 +58,10 @@ async function startBot() {
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
     const statusCode = lastDisconnect?.error?.output?.statusCode;
     if (connection || qr || lastDisconnect) {
-      console.log("WhatsApp connection update:", JSON.stringify({
-        connection: connection || "connecting",
-        hasPairingQR: Boolean(qr),
-        statusCode: statusCode || null,
-        error: lastDisconnect?.error?.message || null
-      }));
+      console.log("WA state=" + (connection || "connecting") +
+        " code=" + (statusCode || "-") +
+        " qr=" + Boolean(qr) +
+        " error=" + String(lastDisconnect?.error?.message || "-").slice(0, 140));
     }
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
       console.log("\nScan this QR from WhatsApp > Linked devices:\n");
