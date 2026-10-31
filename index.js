@@ -203,7 +203,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!text) continue;
 
       if (isGroup(chat)) {
-        // Reply in a group whenever someone mentions the bot's own WhatsApp number.
+        // Reply when the configured owner's number is mentioned in a group.
         const mentionedJids = [
           ...(msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || []),
           ...(msg.message?.imageMessage?.contextInfo?.mentionedJid || []),
@@ -211,10 +211,10 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           ...(msg.message?.documentMessage?.contextInfo?.mentionedJid || []),
           ...(msg.message?.messageContextInfo?.mentionedJid || [])
         ];
-        const botNumber = senderNumber(sock.user?.id || "");
-        const botMentioned = Boolean(botNumber) &&
-          mentionedJids.some(jid => senderNumber(jid) === botNumber);
-        if (botMentioned) {
+        const ownerMentioned = OWNER_NUMBERS.some(ownerNumber =>
+          mentionedJids.some(jid => senderNumber(jid) === ownerNumber)
+        );
+        if (ownerMentioned) {
           await sock.sendMessage(chat, {
             text: "🥰 എന്താ വിശേഷം, സുഖമല്ലേ? 💖 ഞാൻ ഇവിടെത്തന്നെയുണ്ട് ട്ടോ! 😊✨ പറയൂ, എന്താണ് വിശേഷങ്ങൾ? 💬💕"
           }, { quoted: msg }).catch(() => {});
