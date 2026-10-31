@@ -20,6 +20,29 @@ const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/sessio
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
 let restarting = false;
+let pairingReady = false;
+let pairingReadyWaiters = [];
+
+function waitForPairingReady(timeoutMs = 20000) {
+  if (pairingReady) return Promise.resolve(true);
+  return new Promise(resolve => {
+    const waiter = { resolve, timer: null };
+    waiter.timer = setTimeout(() => {
+      pairingReadyWaiters = pairingReadyWaiters.filter(item => item !== waiter);
+      resolve(false);
+    }, timeoutMs);
+    pairingReadyWaiters.push(waiter);
+  });
+}
+function markPairingReady() {
+  pairingReady = true;
+  const waiters = pairingReadyWaiters;
+  pairingReadyWaiters = [];
+  for (const waiter of waiters) {
+    clearTimeout(waiter.timer);
+    waiter.resolve(true);
+  }
+}
 
 function senderNumber(jid = "") {
   return jid.split("@")[0].split(":")[0].replace(/\D/g, "");
@@ -41,6 +64,7 @@ function getText(msg) {
     "";
 }
 async function startBot() {
+  pairingReady = false;
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   let version;
   try { ({ version } = await fetchLatestBaileysVersion()); } catch {}
@@ -63,6 +87,8 @@ async function startBot() {
         " qr=" + Boolean(qr) +
         " error=" + String(lastDisconnect?.error?.message || "-").slice(0, 140));
     }
+    if (qr) markPairingReady();
+    if (connection === "open" || connection === "close") pairingReady = false;
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
       console.log("\nScan this QR from WhatsApp > Linked devices:\n");
       qrcode.generate(qr, { small: true });
@@ -171,5 +197,5 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
-startTelegram(() => sock);
+startTelegram(() => sock, () => pairingReady, waitForPairingReady);
 startBot().catch(err => { console.error("Bot failed to start:", err); process.exit(1); });
