@@ -270,7 +270,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         const asksDeliveryCharge = /\b(delivery charge|delivery charges|delivery fee|delivery cost|how much for delivery|delivery price|charge for delivery)\b|ഡെലിവറി ചാർജ്|ഡെലിവറി എത്ര/.test(customerText);
         let customerReply = "";
         if (saysHi) {
-          const photoUrls = (process.env.GRILL_ARABIA_PHOTOS || "").split(",").map(url => url.trim()).filter(url => /^https?:\\/\\//i.test(url));
+          const photoUrls = (process.env.GRILL_ARABIA_PHOTOS || "").split(",").map(url => url.trim()).filter(url => /^https?:\/\//i.test(url));
           if (photoUrls.length) {
             await sock.sendMessage(chat, { text: "Hi! 👋 Welcome to Grill Arabia 😊\nHere are our photos:" }).catch(() => {});
             for (const url of photoUrls) {
