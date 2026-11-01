@@ -262,19 +262,19 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 
       // Grill Arabia customer auto-replies in private chats only.
       if (!isGroup(chat) && !msg.key.fromMe) {
-        const customerText = text.toLocaleLowerCase().replace(/[!?.,]/g, " ").replace(/\\s+/g, " ").trim();
-        const saysHi = /^(hi|hello|hey|hai|ഹായ്|ഹലോ)(\\s.*)?$/.test(customerText);
-        const asksMenu = /\\b(menu|menus|food menu|send menu|share menu|menu please|price list|items and price)\\b|മെനു|വിലവിവരം/.test(customerText);
-        const asksLocation = /\\b(location|address|where are you|where is your shop|shop location|map|google map|directions)\\b|ലൊക്കേഷൻ|അഡ്രസ്|എവിടെയാണ്/.test(customerText);
-        const asksDeliveryAvailability = /\\b(delivery available|available for delivery|do you deliver|delivery possible|is it possible delivery|can you deliver|home delivery|deliver to me)\\b|ഡെലിവറി ഉണ്ടോ|ഡെലിവറി ലഭിക്കുമോ/.test(customerText);
-        const asksDeliveryCharge = /\\b(delivery charge|delivery charges|delivery fee|delivery cost|how much for delivery|delivery price|charge for delivery)\\b|ഡെലിവറി ചാർജ്|ഡെലിവറി എത്ര/.test(customerText);
+        const customerText = text.toLocaleLowerCase().replace(/[!?.,]/g, " ").replace(/\s+/g, " ").trim();
+        const saysHi = /^(hi|hello|hey|hai|ഹായ്|ഹലോ)(\s.*)?$/.test(customerText);
+        const asksMenu = /\b(menu|menus|food menu|send menu|share menu|menu please|price list|items and price)\b|മെനു|വിലവിവരം/.test(customerText);
+        const asksLocation = /\b(location|address|where are you|where is your shop|shop location|map|google map|directions)\b|ലൊക്കേഷൻ|അഡ്രസ്|എവിടെയാണ്/.test(customerText);
+        const asksDeliveryAvailability = /\b(delivery available|available for delivery|do you deliver|delivery possible|is it possible delivery|can you deliver|home delivery|deliver to me)\b|ഡെലിവറി ഉണ്ടോ|ഡെലിവറി ലഭിക്കുമോ/.test(customerText);
+        const asksDeliveryCharge = /\b(delivery charge|delivery charges|delivery fee|delivery cost|how much for delivery|delivery price|charge for delivery)\b|ഡെലിവറി ചാർജ്|ഡെലിവറി എത്ര/.test(customerText);
         let customerReply = "";
         if (saysHi) {
           customerReply = "Hi, this is from Grill Arabia 😊 How can we help you?";
         } else if (asksMenu) {
-          customerReply = process.env.GRILL_ARABIA_MENU || "Thank you for contacting Grill Arabia 😊 Our menu and item prices will be shared with you shortly.";
+          customerReply = process.env.GRILL_ARABIA_MENU || "🔥 *GRILL ARABIA — THE REAL TASTE* 🔥\n📍 Mannavanur, Kodaikkanal, Chinnamannur, Bodinayakanur\n\n🍗 *ALFAHAM MANDHI*\nFull — ₹1200\nHalf — ₹650\nQuarter — ₹300\n\n🍗 *ALFAHAM*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🔥 *GRILL MANDHI*\nFull — ₹1200\nHalf — ₹700\nQuarter — ₹300\n\n🍗 *GRILL*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🍚 Chicken Biryani — ₹230\n🫓 Porota — ₹25\n🍛 Chicken Masala — ₹230\n\n📞 Delivery: 8489546495\n💬 WhatsApp: 7736094215\n\nThank you for choosing Grill Arabia 😊";
         } else if (asksLocation) {
-          customerReply = process.env.GRILL_ARABIA_LOCATION || "Thank you for contacting Grill Arabia 😊 Our location will be shared with you shortly.";
+          customerReply = process.env.GRILL_ARABIA_LOCATION || "Thank you for contacting Grill Arabia 😊 Our location is Mannavanur, Poondi. Please call 8489546495 for directions.";
         } else if (asksDeliveryAvailability) {
           customerReply = "Yes, delivery is available 😊 Please share your location so we can check the delivery details.";
         } else if (asksDeliveryCharge) {
