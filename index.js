@@ -384,7 +384,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
       // Statistics commands are available to group members; other commands remain owner-only.
-      if (command && !isOwner(sender) && !["topchat", "mystats", "antilink", "antidelete"].includes(command)) {
+      if (command && !isOwner(sender) && !["topchat", "mystats", "antilink", "antidelete", "antispam", "securityalerts", "welcome"].includes(command)) {
         await reply("🔒 ഈ കമാൻഡ് ഉപയോഗിക്കാൻ ബോട്ട് ഓണർക്ക് മാത്രം അനുവാദമുണ്ട്.");
         continue;
       }
