@@ -19,7 +19,7 @@ const WARNINGS = new Map();
 const GROUP_SETTINGS = new Map();
 const LAST_MESSAGES = new Map();
 function groupSettings(jid) {
-  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: false, antispam: false, welcome: true, rules: "No rules have been set yet." });
+  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: true, antispam: false, welcome: true, rules: "No rules have been set yet." });
   return GROUP_SETTINGS.get(jid);
 }
 const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
@@ -293,7 +293,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
       // Statistics commands are available to group members; other commands remain owner-only.
-      if (command && !isOwner(sender) && !["topchat", "mystats"].includes(command)) {
+      if (command && !isOwner(sender) && !["topchat", "mystats", "antilink"].includes(command)) {
         await reply("🔒 ഈ കമാൻഡ് ഉപയോഗിക്കാൻ ബോട്ട് ഓണർക്ക് മാത്രം അനുവാദമുണ്ട്.");
         continue;
       }
@@ -320,7 +320,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}kick @user / ${PREFIX}promote @user (owner/admins)
 │ ${PREFIX}demote @user (owner/admins)
 │ ${PREFIX}warn @user / ${PREFIX}warnings
-│ ${PREFIX}antilink on|off (admins)
+│ ${PREFIX}antilink on|off (group admins / owner)
 │ ${PREFIX}antispam on|off (admins)
 │ ${PREFIX}welcome on|off (admins)
 │ ${PREFIX}rules [text] (admins)
