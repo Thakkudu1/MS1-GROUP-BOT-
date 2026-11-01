@@ -21,7 +21,7 @@ const LAST_MESSAGES = new Map();
 const MESSAGE_CACHE = new Map();
 const MESSAGE_CACHE_LIMIT = 500;
 function groupSettings(jid) {
-  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: true, antidelete: false, antispam: false, welcome: true, rules: "No rules have been set yet." });
+  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: true, antidelete: false, antispam: false, securityalerts: true, welcome: true, rules: "No rules have been set yet." });
   return GROUP_SETTINGS.get(jid);
 }
 const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
@@ -311,6 +311,17 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           const senderAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
           if (!senderAdmin && !isOwner(sender)) {
             await sock.sendMessage(chat, { text: "⚠️ Please slow down; anti-spam is enabled." }, { quoted: msg }).catch(() => {});
+            if (settings.securityalerts) {
+              const adminJids = [...new Set((meta?.participants || [])
+                .filter(p => p.admin === "admin" || p.admin === "superadmin")
+                .map(p => p.id).filter(Boolean))];
+              const mentions = [...new Set([sender, ...adminJids])];
+              const adminTags = adminJids.map(jid => "@" + senderNumber(jid)).join(" ");
+              await sock.sendMessage(chat, {
+                text: "🚨 *SPAM ALERT* 🚨\nകുറച്ച് സെക്കൻഡുകൾക്കുള്ളിൽ ഒരാൾ നിരവധി മെസ്സേജുകൾ അയച്ചു. പരിശോധിക്കുക.\nഅയച്ചത്: @" + senderNumber(sender) + (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : ""),
+                mentions
+              }).catch(e => console.error("[SPAM ALERT] failed:", e?.message || e));
+            }
             continue;
           }
         }
@@ -338,6 +349,16 @@ Stay connected, respect everyone, share positive vibes, and help make this group
                 console.error("[ANTILINK] Admin alert failed:", e?.message || e);
               });
             } else {
+              if (settings.securityalerts) {
+                const adminJids = [...new Set((meta?.participants || [])
+                  .filter(p => p.admin === "admin" || p.admin === "superadmin")
+                  .map(p => p.id).filter(Boolean))];
+                const adminTags = adminJids.map(jid => "@" + senderNumber(jid)).join(" ");
+                await sock.sendMessage(chat, {
+                  text: "🚨 *LINK ALERT* 🚨\nഒരു ലിങ്ക് കണ്ടെത്തി; ബോട്ട് ലിങ്ക് നീക്കം ചെയ്യാൻ ശ്രമിക്കുന്നു.\nഅയച്ചത്: @" + senderNumber(sender) + (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : ""),
+                  mentions: [...new Set([sender, ...adminJids])]
+                }).catch(e => console.error("[LINK ALERT] failed:", e?.message || e));
+              }
               const deleteKey = {
                 remoteJid: chat,
                 fromMe: Boolean(msg.key.fromMe),
@@ -393,6 +414,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}antilink on|off (group admins / owner)
 │ ${PREFIX}antidelete on|off (text recovery; admins / owner)
 │ ${PREFIX}antispam on|off (admins)
+│ ${PREFIX}securityalerts on|off (link/spam admin alerts)
 │ ${PREFIX}welcome on|off (admins)
 │ ${PREFIX}rules [text] (admins)
 │ ${PREFIX}ping / ${PREFIX}alive / ${PREFIX}owner
@@ -420,7 +442,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           await sock.groupParticipantsUpdate(chat, [target], action);
           await reply("Done: " + command + " for @" + senderNumber(target) + ".");
         } catch (e) { await reply("Could not " + command + " that member. Check bot admin permissions."); }
-      } else if (["antilink", "antidelete", "antispam", "welcome"].includes(command) && isGroup(chat)) {
+      } else if (["antilink", "antidelete", "antispam", "securityalerts", "welcome"].includes(command) && isGroup(chat)) {
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
         if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can change settings."); continue; }
