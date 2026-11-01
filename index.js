@@ -297,7 +297,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         if (!ranking.length) await reply("📊 ഇതുവരെ ഗ്രൂപ്പ് മെസ്സേജുകൾ കണക്കാക്കിയിട്ടില്ല.");
         else {
           const lines = ranking.map((item, i) => (["🥇", "🥈", "🥉"][i] || (String(i + 1) + ".")) + " " + item.name + " — " + item.count + " മെസ്സേജുകൾ");
-          await reply("🏆 *TOP 10 CHATTERS* 🏆\\n\\n" + lines.join("\\n") + "\\n\\n📌 ബോട്ട് കണക്കാക്കിത്തുടങ്ങിയതുമുതലുള്ള മെസ്സേജുകളാണ് ഉൾപ്പെടുത്തിയിരിക്കുന്നത്.");
+          await reply("🏆 *TOP 10 CHATTERS* 🏆\n\n" + lines.join("\n") + "\n\n📌 ബോട്ട് കണക്കാക്കിത്തുടങ്ങിയതുമുതലുള്ള മെസ്സേജുകളാണ് ഉൾപ്പെടുത്തിയിരിക്കുന്നത്.");
         }
       } else if (command === "mystats" && isGroup(chat)) {
         const mine = MESSAGE_COUNTS[chat]?.[sender];
