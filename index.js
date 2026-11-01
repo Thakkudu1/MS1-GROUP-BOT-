@@ -211,9 +211,14 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!msg.message) continue;
       const chat = msg.key.remoteJid;
       if (!chat || chat === "status@broadcast") continue;
-      const sender = msg.key.fromMe ? (sock.user?.id || msg.key.participant || chat) : (msg.key.participantAlt || msg.key.participant || chat);
+      const sender = msg.key.fromMe
+        ? (sock.user?.id || msg.key.participant || msg.key.participantAlt || chat)
+        : (msg.key.participant || msg.key.participantAlt || msg.participant || chat);
       const text = getText(msg).trim();
-      if (isGroup(chat)) recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
+      if (isGroup(chat)) {
+        console.log("[TOPCHAT] message", JSON.stringify({ type, fromMe: Boolean(msg.key.fromMe), chat, participant: msg.key.participant || null, participantAlt: msg.key.participantAlt || null, pushName: msg.pushName || null }));
+        recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
+      }
       if (!text) continue;
 
       if (isGroup(chat)) {
