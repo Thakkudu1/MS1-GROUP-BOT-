@@ -270,7 +270,17 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         const asksDeliveryCharge = /\b(delivery charge|delivery charges|delivery fee|delivery cost|how much for delivery|delivery price|charge for delivery)\b|ഡെലിവറി ചാർജ്|ഡെലിവറി എത്ര/.test(customerText);
         let customerReply = "";
         if (saysHi) {
-          customerReply = "Hi, this is from Grill Arabia 😊 How can we help you?";
+          const photoUrls = (process.env.GRILL_ARABIA_PHOTOS || "").split(",").map(url => url.trim()).filter(url => /^https?:\\/\\//i.test(url));
+          if (photoUrls.length) {
+            await sock.sendMessage(chat, { text: "Hi! 👋 Welcome to Grill Arabia 😊\nHere are our photos:" }).catch(() => {});
+            for (const url of photoUrls) {
+              await sock.sendMessage(chat, { image: { url }, caption: "📸 Grill Arabia" }).catch(e =>
+                console.error("[GRILL ARABIA PHOTOS] failed:", e?.message || e)
+              );
+            }
+          } else {
+            customerReply = "Hi! 👋 Welcome to Grill Arabia 😊\n\n📸 View our restaurant photos on Google Maps:\nhttps://maps.app.goo.gl/2EYDbEmqZpo9FsPCA\n\nHow can we help you?";
+          }
         } else if (asksMenu) {
           customerReply = process.env.GRILL_ARABIA_MENU || "🔥 *GRILL ARABIA — THE REAL TASTE* 🔥\n📍 Mannavanur, Kodaikkanal, Chinnamannur, Bodinayakanur\n\n🍗 *ALFAHAM MANDHI*\nFull — ₹1200\nHalf — ₹650\nQuarter — ₹300\n\n🍗 *ALFAHAM*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🔥 *GRILL MANDHI*\nFull — ₹1200\nHalf — ₹700\nQuarter — ₹300\n\n🍗 *GRILL*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🍚 Chicken Biryani — ₹230\n🫓 Porota — ₹25\n🍛 Chicken Masala — ₹230\n\n📞 Delivery: 8489546495\n💬 WhatsApp: 7736094215\n\nThank you for choosing Grill Arabia 😊";
         } else if (asksLocation) {
