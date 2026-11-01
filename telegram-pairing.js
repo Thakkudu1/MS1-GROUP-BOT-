@@ -60,12 +60,11 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
     const isGroup = ['group', 'supergroup'].includes(msg.chat && msg.chat.type);
     if (isGroup && msg.from && !msg.from.is_bot) {
       recordTelegramMessage(msg.chat.id, msg.from, msg);
-      const command = String(msg.text || '').trim().split(/\\s+/)[0].split('@')[0].toLowerCase();
+      const command = String(msg.text || '').trim().split(/\s+/)[0].split('@')[0].toLowerCase();
       if (command === '/topchat') {
-        const ranking = Object.values(TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)] || {}).sort((a, b) => b.count - a.count).slice(0, 10);
         const all = Object.entries(TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)] || {}).map(([id, s]) => ({ id, name: s.name || id, count: Number(s.count) || 0 })).sort((a, b) => b.count - a.count).slice(0, 10);
         const lines = all.map((item, i) => (['🥇', '🥈', '🥉'][i] || (String(i + 1) + '.')) + ' ' + item.name + ' — ' + item.count + ' messages');
-        await bot.sendMessage(msg.chat.id, lines.length ? '🏆 TOP 10 CHATTERS 🏆\\n\\n' + lines.join('\\n') + '\\n\\nCounts start from when this bot began tracking messages.' : 'No messages have been counted yet.');
+        await bot.sendMessage(msg.chat.id, lines.length ? '🏆 TOP 10 CHATTERS 🏆\n\n' + lines.join('\n') + '\n\nCounts start from when this bot began tracking messages.' : 'No messages have been counted yet.');
       } else if (command === '/mystats') {
         const mine = TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)] && TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)][String(msg.from.id)];
         await bot.sendMessage(msg.chat.id, '📊 Your message count: ' + (Number(mine && mine.count) || 0));
