@@ -18,6 +18,7 @@ const WARN_LIMIT = Number(process.env.WARN_LIMIT || 3);
 const WARNINGS = new Map();
 const GROUP_SETTINGS = new Map();
 const LAST_MESSAGES = new Map();
+const LAST_OWNER_REPLIES = new Map();
 const MESSAGE_CACHE = new Map();
 const MESSAGE_CACHE_LIMIT = 500;
 function groupSettings(jid) {
@@ -296,9 +297,27 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             mentionedJids.length >= Math.max(2, metadata.participants.length - 1));
         }
         if (ownerMentioned || ownerNameMentioned || explicitAllMention || allGroupMembersMentioned) {
-          await sock.sendMessage(chat, {
-            text: "🥰 എന്താ വിശേഷം, സുഖമല്ലേ? 💖 ഞാൻ ഇവിടെത്തന്നെയുണ്ട് ട്ടോ! 😊✨ പറയൂ, എന്താണ് വിശേഷങ്ങൾ? 💬💕"
-          }, { quoted: msg }).catch(() => {});
+          const friendlyReplies = [
+            "🥰 എന്താ വിശേഷം? ഞാൻ ഇവിടെത്തന്നെയുണ്ട് ട്ടോ! പറയൂ 😊💖",
+            "ഹായ് കൂട്ടുകാരേ! 😄 എന്നെ വിളിച്ചോ? പറയൂ, എന്താണ് കാര്യം? 💬✨",
+            "ഞാൻ ഇവിടെ ഉണ്ട് ട്ടോ 😊❤️ എന്തെങ്കിലും പറയാനുണ്ടോ?",
+            "ഓഹോ, എന്നെയാണോ മെൻഷൻ ചെയ്തത്? 😄 പറയൂ കേൾക്കട്ടെ! 💛",
+            "ഹായ് 😊 സുഖമാണോ എല്ലാവർക്കും? ഞാൻ ഇവിടെയുണ്ട്, പറയൂ! 🌸",
+            "വിളി കേട്ടു ട്ടോ 😄💖 എന്താണ് വിശേഷം?",
+            "എന്നെ ഓർത്തതിന് നന്ദി കൂട്ടുകാരേ! 😊 പറയൂ, എന്ത് സഹായമാണ് വേണ്ടത്?",
+            "ഹലോ ഹലോ! 👋😄 ഞാൻ ഇവിടെ തന്നെയുണ്ട് ട്ടോ!",
+            "എന്താ മക്കളേ വിശേഷം? 😍 പറയൂ, കേൾക്കുന്നുണ്ട്!",
+            "മെൻഷൻ കണ്ടു 😊✨ പറയൂ, എന്താണ് സംസാരിക്കാനുള്ളത്?",
+            "ഞാൻ റെഡിയാണ് ട്ടോ 😄💬 പറയൂ, എന്താണ് വിശേഷം?",
+            "ഹായ്! 💕 ഇവിടെത്തന്നെയുണ്ട്, എല്ലാവരും സുഖമായിരിക്കുന്നോ?"
+          ];
+          const previousReply = LAST_OWNER_REPLIES.get(chat);
+          const choices = friendlyReplies.filter(replyText => replyText !== previousReply);
+          const replyText = choices[Math.floor(Math.random() * choices.length)] || friendlyReplies[0];
+          LAST_OWNER_REPLIES.set(chat, replyText);
+          await sock.sendMessage(chat, { text: replyText }, { quoted: msg }).catch(e =>
+            console.error("[OWNER MENTION REPLY] failed:", e?.message || e)
+          );
         }
         const settings = groupSettings(chat);
         const now = Date.now();
