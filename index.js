@@ -281,8 +281,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           const isAdminParticipant = (p, jid) =>
             [p.id, p.phoneNumber, p.lid].filter(Boolean).some(id => jidNormalizedUser(id) === jidNormalizedUser(jid)) &&
             (p.admin === "admin" || p.admin === "superadmin");
-          const senderAdmin = (meta?.participants || []).some(p => isAdminParticipant(p, sender));
-          if (!senderAdmin && !isOwner(sender)) {
+          // Delete links from all members, including group admins. Only the configured bot owner is exempt.
+          if (!isOwner(sender)) {
             const botJids = [sock.user?.id, sock.user?.lid].filter(Boolean);
             const botAdmin = (meta?.participants || []).some(p =>
               botJids.some(jid => isAdminParticipant(p, jid))
