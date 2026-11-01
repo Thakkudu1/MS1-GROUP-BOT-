@@ -4,7 +4,10 @@
 
 ## കമാൻഡുകൾ
 - Telegram: `/start`, `/id`, `/pair`
-- WhatsApp: `.menu`, `.ping`, `.alive`, `.owner`, `.tagall`, `.warn @member`, `.warnings`
+- WhatsApp: `.menu`, `.ping`, `.alive`, `.owner`, `.topchat`, `.mystats`, `.tagall`, `.warn @member`, `.warnings`
+- `.topchat`: ഗ്രൂപ്പിൽ ഏറ്റവും കൂടുതൽ മെസ്സേജ് അയച്ച Top 10 അംഗങ്ങളെ കാണിക്കും.
+- `.mystats`: നിങ്ങൾ അയച്ച മെസ്സേജുകളുടെ എണ്ണം കാണിക്കും.
+- മെസ്സേജ് കണക്ക് ബോട്ട് പ്രവർത്തിക്കുന്ന സമയത്തുമുതൽ ശേഖരിക്കും; പഴയ മെസ്സേജുകൾ കണക്കിൽ വരില്ല.
 
 ## പ്രധാന സുരക്ഷാ മുന്നറിയിപ്പ്
 Baileys ഒരു അനൗദ്യോഗിക WhatsApp Web ലൈബ്രറിയാണ്. WhatsApp നിയന്ത്രണങ്ങൾ/അക്കൗണ്ട് നിയന്ത്രണം ഉണ്ടാകാം. കഴിയുമെങ്കിൽ പ്രത്യേകം നമ്പർ ഉപയോഗിക്കുക. Telegram bot token, WhatsApp session files എന്നിവ രഹസ്യമാണ്; ഇവ GitHub-ൽ ഇടരുത്, മറ്റൊരാൾക്കും അയക്കരുത്.
