@@ -213,7 +213,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!chat || chat === "status@broadcast") continue;
       const sender = msg.key.fromMe ? (sock.user?.id || msg.key.participant || chat) : (msg.key.participant || chat);
       const text = getText(msg).trim();
-      if (isGroup(chat) && !msg.key.fromMe) recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
+      if (isGroup(chat)) recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
       if (!text) continue;
 
       if (isGroup(chat)) {
