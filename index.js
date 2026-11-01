@@ -18,8 +18,10 @@ const WARN_LIMIT = Number(process.env.WARN_LIMIT || 3);
 const WARNINGS = new Map();
 const GROUP_SETTINGS = new Map();
 const LAST_MESSAGES = new Map();
+const MESSAGE_CACHE = new Map();
+const MESSAGE_CACHE_LIMIT = 500;
 function groupSettings(jid) {
-  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: true, antispam: false, welcome: true, rules: "No rules have been set yet." });
+  if (!GROUP_SETTINGS.has(jid)) GROUP_SETTINGS.set(jid, { antilink: true, antidelete: false, antispam: false, welcome: true, rules: "No rules have been set yet." });
   return GROUP_SETTINGS.get(jid);
 }
 const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
@@ -205,6 +207,34 @@ Stay connected, respect everyone, share positive vibes, and help make this group
     }
   });
 
+  // Cache text messages so the bot can repost them if they are deleted for everyone.
+  // This is in-memory only and does not recover messages sent before the bot was running.
+  sock.ev.on("messages.update", async (updates) => {
+    for (const item of updates || []) {
+      const protocolMessage = item.update?.message?.protocolMessage;
+      const isRevoke = protocolMessage &&
+        (protocolMessage.type === 0 || protocolMessage.type === "REVOKE");
+      if (!isRevoke) continue;
+      const deletedKey = protocolMessage.key;
+      const chat = deletedKey?.remoteJid || item.key?.remoteJid;
+      const id = deletedKey?.id;
+      if (!chat || !id || !isGroup(chat) || !groupSettings(chat).antidelete) continue;
+      const cacheKey = chat + ":" + id;
+      const cached = MESSAGE_CACHE.get(cacheKey);
+      if (!cached?.text) {
+        console.log("[ANTIDELETE] Deleted message not in text cache", JSON.stringify({ chat, id }));
+        continue;
+      }
+      const senderTag = "@" + senderNumber(cached.sender);
+      await sock.sendMessage(chat, {
+        text: "🗑️ *ANTI-DELETE: മെസ്സേജ് ഡിലീറ്റ് ചെയ്തു*\\nഅയച്ചത്: " + senderTag +
+          "\\nമെസ്സേജ്: " + cached.text,
+        mentions: cached.sender ? [cached.sender] : []
+      }).catch(e => console.error("[ANTIDELETE] Restore notice failed:", e?.message || e));
+      console.log("[ANTIDELETE] Reposted deleted text", JSON.stringify({ chat, id }));
+    }
+  });
+
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
     for (const msg of messages) {
@@ -215,6 +245,14 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         ? (sock.user?.id || msg.key.participant || msg.key.participantAlt || chat)
         : (msg.key.participant || msg.key.participantAlt || msg.participant || chat);
       const text = getText(msg).trim();
+      if (isGroup(chat) && text && msg.key.id) {
+        const cacheKey = chat + ":" + msg.key.id;
+        MESSAGE_CACHE.set(cacheKey, { text, sender, timestamp: Date.now() });
+        if (MESSAGE_CACHE.size > MESSAGE_CACHE_LIMIT) {
+          const oldestKey = MESSAGE_CACHE.keys().next().value;
+          if (oldestKey) MESSAGE_CACHE.delete(oldestKey);
+        }
+      }
       if (isGroup(chat)) {
         console.log("[TOPCHAT] message", JSON.stringify({ type, fromMe: Boolean(msg.key.fromMe), chat, participant: msg.key.participant || null, participantAlt: msg.key.participantAlt || null, pushName: msg.pushName || null }));
         recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
@@ -325,7 +363,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
       // Statistics commands are available to group members; other commands remain owner-only.
-      if (command && !isOwner(sender) && !["topchat", "mystats", "antilink"].includes(command)) {
+      if (command && !isOwner(sender) && !["topchat", "mystats", "antilink", "antidelete"].includes(command)) {
         await reply("🔒 ഈ കമാൻഡ് ഉപയോഗിക്കാൻ ബോട്ട് ഓണർക്ക് മാത്രം അനുവാദമുണ്ട്.");
         continue;
       }
@@ -353,6 +391,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}demote @user (owner/admins)
 │ ${PREFIX}warn @user / ${PREFIX}warnings
 │ ${PREFIX}antilink on|off (group admins / owner)
+│ ${PREFIX}antidelete on|off (text recovery; admins / owner)
 │ ${PREFIX}antispam on|off (admins)
 │ ${PREFIX}welcome on|off (admins)
 │ ${PREFIX}rules [text] (admins)
@@ -381,7 +420,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           await sock.groupParticipantsUpdate(chat, [target], action);
           await reply("Done: " + command + " for @" + senderNumber(target) + ".");
         } catch (e) { await reply("Could not " + command + " that member. Check bot admin permissions."); }
-      } else if (["antilink", "antispam", "welcome"].includes(command) && isGroup(chat)) {
+      } else if (["antilink", "antidelete", "antispam", "welcome"].includes(command) && isGroup(chat)) {
         const metadata = await sock.groupMetadata(chat).catch(() => null);
         const senderIsAdmin = metadata?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
         if (!senderIsAdmin && !isOwner(sender)) { await reply("Only group admins can change settings."); continue; }
