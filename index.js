@@ -208,10 +208,10 @@ Stay connected, respect everyone, share positive vibes, and help make this group
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
     if (type !== "notify") return;
     for (const msg of messages) {
-      if (!msg.message || (msg.key.fromMe && !getText(msg).trim().startsWith(PREFIX))) continue;
+      if (!msg.message) continue;
       const chat = msg.key.remoteJid;
       if (!chat || chat === "status@broadcast") continue;
-      const sender = msg.key.fromMe ? (sock.user?.id || msg.key.participant || chat) : (msg.key.participant || chat);
+      const sender = msg.key.fromMe ? (sock.user?.id || msg.key.participant || chat) : (msg.key.participantAlt || msg.key.participant || chat);
       const text = getText(msg).trim();
       if (isGroup(chat)) recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
       if (!text) continue;
