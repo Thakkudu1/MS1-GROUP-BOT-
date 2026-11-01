@@ -288,8 +288,17 @@ Stay connected, respect everyone, share positive vibes, and help make this group
               botJids.some(jid => isAdminParticipant(p, jid))
             );
             if (!botAdmin) {
-              console.log("[ANTILINK] Cannot delete: bot is not group admin", chat);
-              await sock.sendMessage(chat, { text: "⚠️ ലിങ്ക് ഡിലീറ്റ് ചെയ്യാൻ ബോട്ടിനെ ഈ ഗ്രൂപ്പിൽ Admin ആക്കണം." }).catch(() => {});
+              console.log("[ANTILINK] Cannot delete: bot is not group admin; notifying group admins", chat);
+              const adminJids = (meta?.participants || [])
+                .filter(p => p.admin === "admin" || p.admin === "superadmin")
+                .map(p => p.id)
+                .filter(Boolean);
+              const adminMentions = [...new Set(adminJids)];
+              const adminTags = adminMentions.map(jid => "@" + senderNumber(jid)).join(" ");
+              const alertText = "🚨 *ANTI-LINK ALERT* 🚨\\nഒരു ലിങ്ക് കണ്ടെത്തി. ദയവായി പരിശോധിക്കുക.\\nഅയച്ചത്: @" + senderNumber(sender) + (adminTags ? "\\nഗ്രൂപ്പ് അഡ്മിൻമാർ: " + adminTags : "\\nഗ്രൂപ്പ് അഡ്മിൻമാരെ കണ്ടെത്താനായില്ല.");
+              await sock.sendMessage(chat, { text: alertText, mentions: [...new Set([sender, ...adminMentions])] }).catch(e => {
+                console.error("[ANTILINK] Admin alert failed:", e?.message || e);
+              });
             } else {
               const deleteKey = {
                 remoteJid: chat,
