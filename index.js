@@ -278,11 +278,34 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         }
         if (settings.antilink && /(?:https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|telegram\.me\/|bit\.ly\/|tinyurl\.com\/|(?:[a-z0-9-]+\.)+(?:com|net|org|in|io|co|me|gg|ly|app|dev|info|biz|xyz|site|online|store|tech|edu|gov|ai|tv|cc|uk|us|de|ru|br|jp|cn|au|ca|eu|link|click|top|live|pro|cloud|social|website|space|fun|pw|tk|ml|ga|cf|gq)(?:\/|\b))/i.test(text)) {
           const meta = await sock.groupMetadata(chat).catch(() => null);
-          const senderAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
+          const isAdminParticipant = (p, jid) =>
+            [p.id, p.phoneNumber, p.lid].filter(Boolean).some(id => jidNormalizedUser(id) === jidNormalizedUser(jid)) &&
+            (p.admin === "admin" || p.admin === "superadmin");
+          const senderAdmin = (meta?.participants || []).some(p => isAdminParticipant(p, sender));
           if (!senderAdmin && !isOwner(sender)) {
-            const botAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sock.user.id) && (p.admin === "admin" || p.admin === "superadmin"));
-            if (botAdmin) await sock.sendMessage(chat, { delete: msg.key }).catch(() => {});
-            await sock.sendMessage(chat, { text: "🔗 Links are not allowed in this group." }).catch(() => {});
+            const botJids = [sock.user?.id, sock.user?.lid].filter(Boolean);
+            const botAdmin = (meta?.participants || []).some(p =>
+              botJids.some(jid => isAdminParticipant(p, jid))
+            );
+            if (!botAdmin) {
+              console.log("[ANTILINK] Cannot delete: bot is not group admin", chat);
+              await sock.sendMessage(chat, { text: "⚠️ ലിങ്ക് ഡിലീറ്റ് ചെയ്യാൻ ബോട്ടിനെ ഈ ഗ്രൂപ്പിൽ Admin ആക്കണം." }).catch(() => {});
+            } else {
+              const deleteKey = {
+                remoteJid: chat,
+                fromMe: Boolean(msg.key.fromMe),
+                id: msg.key.id,
+                participant: msg.key.participant || msg.key.participantAlt || sender
+              };
+              try {
+                await sock.sendMessage(chat, { delete: deleteKey });
+                console.log("[ANTILINK] Deleted link message", JSON.stringify({ chat, id: msg.key.id }));
+              } catch (e) {
+                console.error("[ANTILINK] Delete failed:", e?.message || e);
+                await sock.sendMessage(chat, { text: "⚠️ ലിങ്ക് ഡിലീറ്റ് ചെയ്യാനായില്ല. ബോട്ടിന്റെ Admin permission പരിശോധിക്കുക." }).catch(() => {});
+              }
+            }
+            await sock.sendMessage(chat, { text: "🔗 ഗ്രൂപ്പിൽ ലിങ്കുകൾ അനുവദനീയമല്ല." }).catch(() => {});
             continue;
           }
         }
