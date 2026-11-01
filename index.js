@@ -23,6 +23,19 @@ function groupSettings(jid) {
   return GROUP_SETTINGS.get(jid);
 }
 const SESSION_DIR = process.env.SESSION_DIR || (process.env.PORT ? "/data/session" : "./session");
+const STATS_FILE = process.env.STATS_FILE || (process.env.PORT ? "/data/message-counts.json" : "./message-counts.json");
+let MESSAGE_COUNTS = {};
+try {
+  if (fs.existsSync(STATS_FILE)) MESSAGE_COUNTS = JSON.parse(fs.readFileSync(STATS_FILE, "utf8"));
+} catch (e) { console.error("Could not load message counts:", e.message); }
+function recordGroupMessage(chat, sender, displayName) {
+  if (!MESSAGE_COUNTS[chat]) MESSAGE_COUNTS[chat] = {};
+  if (!MESSAGE_COUNTS[chat][sender]) MESSAGE_COUNTS[chat][sender] = { count: 0, name: displayName || senderNumber(sender) };
+  MESSAGE_COUNTS[chat][sender].count += 1;
+  if (displayName) MESSAGE_COUNTS[chat][sender].name = displayName;
+  try { fs.writeFileSync(STATS_FILE, JSON.stringify(MESSAGE_COUNTS, null, 2)); }
+  catch (e) { console.error("Could not save message counts:", e.message); }
+}
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
 let restarting = false;
@@ -200,6 +213,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!chat || chat === "status@broadcast") continue;
       const sender = msg.key.fromMe ? (sock.user?.id || msg.key.participant || chat) : (msg.key.participant || chat);
       const text = getText(msg).trim();
+      if (isGroup(chat) && !msg.key.fromMe) recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
       if (!text) continue;
 
       if (isGroup(chat)) {
@@ -273,18 +287,30 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
-      // Owner-only command gate: no group admin or regular member may run commands.
-      if (command && !isOwner(sender)) {
+      // Statistics commands are available to group members; other commands remain owner-only.
+      if (command && !isOwner(sender) && !["topchat", "mystats"].includes(command)) {
         await reply("🔒 ഈ കമാൻഡ് ഉപയോഗിക്കാൻ ബോട്ട് ഓണർക്ക് മാത്രം അനുവാദമുണ്ട്.");
         continue;
       }
-      if (command === "menu" || command === "help") {
+      if (command === "topchat" && isGroup(chat)) {
+        const ranking = Object.entries(MESSAGE_COUNTS[chat] || {}).map(([jid, stats]) => ({ jid, name: stats.name || senderNumber(jid), count: Number(stats.count) || 0 })).sort((a, b) => b.count - a.count).slice(0, 10);
+        if (!ranking.length) await reply("📊 ഇതുവരെ ഗ്രൂപ്പ് മെസ്സേജുകൾ കണക്കാക്കിയിട്ടില്ല.");
+        else {
+          const lines = ranking.map((item, i) => (["🥇", "🥈", "🥉"][i] || (String(i + 1) + ".")) + " " + item.name + " — " + item.count + " മെസ്സേജുകൾ");
+          await reply("🏆 *TOP 10 CHATTERS* 🏆\\n\\n" + lines.join("\\n") + "\\n\\n📌 ബോട്ട് കണക്കാക്കിത്തുടങ്ങിയതുമുതലുള്ള മെസ്സേജുകളാണ് ഉൾപ്പെടുത്തിയിരിക്കുന്നത്.");
+        }
+      } else if (command === "mystats" && isGroup(chat)) {
+        const mine = MESSAGE_COUNTS[chat]?.[sender];
+        await reply("📊 നിങ്ങളുടെ മെസ്സേജ് എണ്ണം: " + (Number(mine?.count) || 0));
+      } else if (command === "menu" || command === "help") {
         await reply(
 `╭─「 MS1 GROUP BOT 」
 │ Prefix: ${PREFIX}
 │ ${PREFIX}menu / ${PREFIX}help
 │ ${PREFIX}ping
 │ ${PREFIX}alive
+│ ${PREFIX}topchat (top 10 message senders)
+│ ${PREFIX}mystats (your message count)
 │ ${PREFIX}tagall [message] (owner/admins)
 │ ${PREFIX}kick @user / ${PREFIX}promote @user (owner/admins)
 │ ${PREFIX}demote @user (owner/admins)
