@@ -274,7 +274,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         } else if (asksMenu) {
           customerReply = process.env.GRILL_ARABIA_MENU || "🔥 *GRILL ARABIA — THE REAL TASTE* 🔥\n📍 Mannavanur, Kodaikkanal, Chinnamannur, Bodinayakanur\n\n🍗 *ALFAHAM MANDHI*\nFull — ₹1200\nHalf — ₹650\nQuarter — ₹300\n\n🍗 *ALFAHAM*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🔥 *GRILL MANDHI*\nFull — ₹1200\nHalf — ₹700\nQuarter — ₹300\n\n🍗 *GRILL*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🍚 Chicken Biryani — ₹230\n🫓 Porota — ₹25\n🍛 Chicken Masala — ₹230\n\n📞 Delivery: 8489546495\n💬 WhatsApp: 7736094215\n\nThank you for choosing Grill Arabia 😊";
         } else if (asksLocation) {
-          customerReply = process.env.GRILL_ARABIA_LOCATION || "Thank you for contacting Grill Arabia 😊 Our location is Mannavanur, Poondi. Please call 8489546495 for directions.";
+          customerReply = process.env.GRILL_ARABIA_LOCATION || "📍 *Grill Arabia — Location*\nMannavanur, Poondi\nGoogle Maps: https://maps.app.goo.gl/2EYDbEmqZpo9FsPCA\n\nFor directions, call 8489546495 😊";
         } else if (asksDeliveryAvailability) {
           customerReply = "Yes, delivery is available 😊 Please share your location so we can check the delivery details.";
         } else if (asksDeliveryCharge) {
