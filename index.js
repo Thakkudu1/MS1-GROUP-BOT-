@@ -260,6 +260,34 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       }
       if (!text) continue;
 
+      // Grill Arabia customer auto-replies in private chats only.
+      if (!isGroup(chat) && !msg.key.fromMe) {
+        const customerText = text.toLocaleLowerCase().replace(/[!?.,]/g, " ").replace(/\\s+/g, " ").trim();
+        const saysHi = /^(hi|hello|hey|hai|ഹായ്|ഹലോ)(\\s.*)?$/.test(customerText);
+        const asksMenu = /\\b(menu|menus|food menu|send menu|share menu|menu please|price list|items and price)\\b|മെനു|വിലവിവരം/.test(customerText);
+        const asksLocation = /\\b(location|address|where are you|where is your shop|shop location|map|google map|directions)\\b|ലൊക്കേഷൻ|അഡ്രസ്|എവിടെയാണ്/.test(customerText);
+        const asksDeliveryAvailability = /\\b(delivery available|available for delivery|do you deliver|delivery possible|is it possible delivery|can you deliver|home delivery|deliver to me)\\b|ഡെലിവറി ഉണ്ടോ|ഡെലിവറി ലഭിക്കുമോ/.test(customerText);
+        const asksDeliveryCharge = /\\b(delivery charge|delivery charges|delivery fee|delivery cost|how much for delivery|delivery price|charge for delivery)\\b|ഡെലിവറി ചാർജ്|ഡെലിവറി എത്ര/.test(customerText);
+        let customerReply = "";
+        if (saysHi) {
+          customerReply = "Hi, this is from Grill Arabia 😊 How can we help you?";
+        } else if (asksMenu) {
+          customerReply = process.env.GRILL_ARABIA_MENU || "Thank you for contacting Grill Arabia 😊 Our menu and item prices will be shared with you shortly.";
+        } else if (asksLocation) {
+          customerReply = process.env.GRILL_ARABIA_LOCATION || "Thank you for contacting Grill Arabia 😊 Our location will be shared with you shortly.";
+        } else if (asksDeliveryAvailability) {
+          customerReply = "Yes, delivery is available 😊 Please share your location so we can check the delivery details.";
+        } else if (asksDeliveryCharge) {
+          customerReply = "Delivery charges are usually ₹60–₹70 for up to 5 km, depending on the exact location. 😊";
+        }
+        if (customerReply) {
+          await sock.sendMessage(chat, { text: customerReply }).catch(e =>
+            console.error("[GRILL ARABIA AUTO-REPLY] failed:", e?.message || e)
+          );
+          continue;
+        }
+      }
+
       if (isGroup(chat)) {
         // Reply when the owner is mentioned, or when the group is all-mentioned/tagged.
         const mentionedJids = [
