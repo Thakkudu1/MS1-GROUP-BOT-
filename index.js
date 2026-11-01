@@ -279,7 +279,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
               );
             }
           } else {
-            customerReply = "Hi! 👋 Welcome to Grill Arabia 😊\n\n📸 View our restaurant photos on Google Maps:\nhttps://maps.app.goo.gl/2EYDbEmqZpo9FsPCA\n\nHow can we help you?";
+            customerReply = "🔥 *WELCOME TO GRILL ARABIA* 🔥\n\nHi there! 👋😊\nThank you for messaging *Grill Arabia — The Real Taste!* 🍗✨\n\nWe’re happy to help you. ❤️\n🍽️ Menu, orders, and delivery details — just send us a message!\n\n📍 *Find us on Google Maps:*\nhttps://maps.app.goo.gl/2EYDbEmqZpo9FsPCA\n\n📞 *Delivery / Enquiries:* 8489546495\n\n😋 *Great taste. Great food. Great moments!*\nThank you for choosing Grill Arabia! ❤️";
           }
         } else if (asksMenu) {
           customerReply = process.env.GRILL_ARABIA_MENU || "🔥 *GRILL ARABIA — THE REAL TASTE* 🔥\n📍 Mannavanur, Kodaikkanal, Chinnamannur, Bodinayakanur\n\n🍗 *ALFAHAM MANDHI*\nFull — ₹1200\nHalf — ₹650\nQuarter — ₹300\n\n🍗 *ALFAHAM*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🔥 *GRILL MANDHI*\nFull — ₹1200\nHalf — ₹700\nQuarter — ₹300\n\n🍗 *GRILL*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🍚 Chicken Biryani — ₹230\n🫓 Porota — ₹25\n🍛 Chicken Masala — ₹230\n\n📞 Delivery: 8489546495\n💬 WhatsApp: 7736094215\n\nThank you for choosing Grill Arabia 😊";
