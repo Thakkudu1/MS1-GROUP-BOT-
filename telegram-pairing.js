@@ -1,19 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
 const QRCode = require('qrcode');
-const fs = require('fs');
-const TELEGRAM_STATS_FILE = process.env.TELEGRAM_STATS_FILE || (process.env.PORT ? '/data/telegram-message-counts.json' : './telegram-message-counts.json');
-let TELEGRAM_MESSAGE_COUNTS = {};
-try { if (fs.existsSync(TELEGRAM_STATS_FILE)) TELEGRAM_MESSAGE_COUNTS = JSON.parse(fs.readFileSync(TELEGRAM_STATS_FILE, 'utf8')); }
-catch (e) { console.error('Could not load Telegram message counts:', e.message); }
-function recordTelegramMessage(chatId, user, msg) {
-  if (!TELEGRAM_MESSAGE_COUNTS[chatId]) TELEGRAM_MESSAGE_COUNTS[chatId] = {};
-  const id = String(user.id);
-  if (!TELEGRAM_MESSAGE_COUNTS[chatId][id]) TELEGRAM_MESSAGE_COUNTS[chatId][id] = { count: 0, name: '' };
-  TELEGRAM_MESSAGE_COUNTS[chatId][id].count += 1;
-  TELEGRAM_MESSAGE_COUNTS[chatId][id].name = [user.first_name, user.last_name].filter(Boolean).join(' ') || (user.username ? '@' + user.username : id);
-  try { fs.writeFileSync(TELEGRAM_STATS_FILE, JSON.stringify(TELEGRAM_MESSAGE_COUNTS, null, 2)); }
-  catch (e) { console.error('Could not save Telegram message counts:', e.message); }
-}
 
 function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurrentQr, waitForQr) {
   const token = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -57,20 +43,6 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
     await bot.sendMessage(msg.chat.id, 'Send your WhatsApp phone number with country code (digits only, e.g. 919876543210).');
   });
   bot.on('message', async (msg) => {
-    const isGroup = ['group', 'supergroup'].includes(msg.chat && msg.chat.type);
-    if (isGroup && msg.from && !msg.from.is_bot) {
-      recordTelegramMessage(msg.chat.id, msg.from, msg);
-      const command = String(msg.text || '').trim().split(/\s+/)[0].split('@')[0].toLowerCase();
-      if (command === '/topchat') {
-        const all = Object.entries(TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)] || {}).map(([id, s]) => ({ id, name: s.name || id, count: Number(s.count) || 0 })).sort((a, b) => b.count - a.count).slice(0, 10);
-        const lines = all.map((item, i) => (['🥇', '🥈', '🥉'][i] || (String(i + 1) + '.')) + ' ' + item.name + ' — ' + item.count + ' messages');
-        await bot.sendMessage(msg.chat.id, lines.length ? '🏆 TOP 10 CHATTERS 🏆\n\n' + lines.join('\n') + '\n\nCounts start from when this bot began tracking messages.' : 'No messages have been counted yet.');
-      } else if (command === '/mystats') {
-        const mine = TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)] && TELEGRAM_MESSAGE_COUNTS[String(msg.chat.id)][String(msg.from.id)];
-        await bot.sendMessage(msg.chat.id, '📊 Your message count: ' + (Number(mine && mine.count) || 0));
-      }
-      return;
-    }
     if (!msg.text || msg.text.startsWith('/') || !authorized(msg)) return;
     const number = msg.text.replace(/\D/g, '');
     if (!/^\d{10,15}$/.test(number)) return;
