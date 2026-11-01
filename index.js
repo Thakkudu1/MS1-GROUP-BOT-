@@ -276,7 +276,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             continue;
           }
         }
-        if (settings.antilink && /https?:\/\/|www\.|chat\.whatsapp\.com\//i.test(text)) {
+        if (settings.antilink && /(?:https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|telegram\.me\/|bit\.ly\/|tinyurl\.com\/|(?:[a-z0-9-]+\.)+(?:com|net|org|in|io|co|me|gg|ly|app|dev|info|biz|xyz|site|online|store|tech|edu|gov|ai|tv|cc|uk|us|de|ru|br|jp|cn|au|ca|eu|link|click|top|live|pro|cloud|social|website|space|fun|pw|tk|ml|ga|cf|gq)(?:\/|\b))/i.test(text)) {
           const meta = await sock.groupMetadata(chat).catch(() => null);
           const senderAdmin = meta?.participants.some(p => jidNormalizedUser(p.id) === jidNormalizedUser(sender) && (p.admin === "admin" || p.admin === "superadmin"));
           if (!senderAdmin && !isOwner(sender)) {
