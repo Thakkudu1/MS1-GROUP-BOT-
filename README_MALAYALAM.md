@@ -3,9 +3,7 @@
 ഈ repository-ൽ Telegram വഴി നിയന്ത്രിച്ച് WhatsApp pairing code നൽകുന്ന Node.js bot starter ഉണ്ട്.
 
 ## കമാൻഡുകൾ
-- Telegram: `/start`, `/id`, `/pair`, `/topchat`, `/mystats`
-- Telegram ഗ്രൂപ്പിൽ `/topchat` ഉപയോഗിച്ചാൽ Top 10 മെസ്സേജ് അയച്ചവരെ കാണിക്കും; `/mystats` നിങ്ങളുടെ കണക്ക് കാണിക്കും.
-- Telegram ഗ്രൂപ്പിലെ എല്ലാ മെസ്സേജുകളും എണ്ണാൻ BotFather-ൽ `/setprivacy` → നിങ്ങളുടെ bot തിരഞ്ഞെടുക്കുക → `Disable` ചെയ്യുക. ശേഷം ബോട്ടിനെ ഗ്രൂപ്പിൽ ചേർക്കുക. കണക്ക് ബോട്ട് ചേർത്തതിന് ശേഷമുള്ള മെസ്സേജുകളിൽ നിന്നാണ് തുടങ്ങുക.
+- Telegram: `/start`, `/id`, `/pair`
 - WhatsApp: `.menu`, `.ping`, `.alive`, `.owner`, `.topchat`, `.mystats`, `.tagall`, `.warn @member`, `.warnings`
 - `.topchat`: ഗ്രൂപ്പിൽ ഏറ്റവും കൂടുതൽ മെസ്സേജ് അയച്ച Top 10 അംഗങ്ങളെ കാണിക്കും.
 - `.mystats`: നിങ്ങൾ അയച്ച മെസ്സേജുകളുടെ എണ്ണം കാണിക്കും.
