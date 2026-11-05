@@ -635,5 +635,5 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
-startTelegram(() => sock, () => pairingReady, waitForPairingReady, () => latestQr, waitForQr);
+startTelegram(() => sock, () => pairingReady, waitForPairingReady, () => (latestQr && Date.now() - latestQrAt < 10000 ? latestQr : null), waitForQr);
 startBot().catch(err => { console.error("Bot failed to start:", err); process.exit(1); });
