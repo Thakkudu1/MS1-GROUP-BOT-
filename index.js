@@ -147,7 +147,7 @@ async function startBot() {
       clearQr();
     }
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
-      console.log("\\nScan this QR from WhatsApp > Linked devices:\\n");
+      console.log("\\nScan this QR from WhatsApp Business > Linked devices:\\n");
       qrcode.generate(qr, { small: true });
     }
     if (connection === "open") {
