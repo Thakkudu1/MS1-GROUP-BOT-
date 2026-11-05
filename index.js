@@ -19,8 +19,9 @@ const WARNINGS = new Map();
 const GROUP_SETTINGS = new Map();
 const LAST_MESSAGES = new Map();
 const LAST_OWNER_REPLIES = new Map();
-let statusAutoReact = process.env.STATUS_AUTO_REACT === "true";
-const STATUS_HEART_REACTIONS = ["❤️", "💖", "💕", "💗", "🥰", "😍", "💘"];
+let statusAutoReact = process.env.STATUS_AUTO_REACT !== "false";
+let statusAutoSeen = process.env.STATUS_AUTO_SEEN !== "false";
+const STATUS_HEART_REACTIONS = ["❤️", "💖", "💕", "💗", "💘", "💝", "💓", "💞", "🩷"];
 const MESSAGE_CACHE = new Map();
 const MESSAGE_CACHE_LIMIT = 500;
 function groupSettings(jid) {
@@ -264,12 +265,18 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (!msg.message) continue;
       const chat = msg.key.remoteJid;
       if (!chat) continue;
-      // React to incoming WhatsApp status updates when enabled by the bot owner.
+      // Automatically view incoming statuses and react with heart emojis only.
       if (chat === "status@broadcast") {
-        if (statusAutoReact && !msg.key.fromMe && msg.key.id) {
-          const reaction = STATUS_HEART_REACTIONS[Math.floor(Math.random() * STATUS_HEART_REACTIONS.length)];
-          await sock.sendMessage("status@broadcast", { react: { text: reaction, key: msg.key } })
-            .catch(e => console.error("[STATUS AUTO-REACTION] failed:", e?.message || e));
+        if (!msg.key.fromMe && msg.key.id) {
+          if (statusAutoSeen) {
+            await sock.readMessages([msg.key])
+              .catch(e => console.error("[STATUS AUTO-SEEN] failed:", e?.message || e));
+          }
+          if (statusAutoReact) {
+            const reaction = STATUS_HEART_REACTIONS[Math.floor(Math.random() * STATUS_HEART_REACTIONS.length)];
+            await sock.sendMessage("status@broadcast", { react: { text: reaction, key: msg.key } })
+              .catch(e => console.error("[STATUS AUTO-REACTION] failed:", e?.message || e));
+          }
         }
         continue;
       }
@@ -559,6 +566,15 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         await reply("🟢 MS1 GROUP BOT is running.");
       } else if (command === "owner") {
         await reply(OWNER_NUMBERS.length ? `Owner: ${OWNER_NUMBERS.map(n => "+" + n).join(", ")}` : "Owner number is not configured yet.");
+      } else if (command === "statusseen") {
+        if (!isOwner(sender)) { await reply("🔒 ഈ കമാൻഡ് ബോട്ട് ഓണർക്ക് മാത്രം ഉപയോഗിക്കാം."); continue; }
+        const value = args[0]?.toLowerCase();
+        if (!["on", "off"].includes(value)) {
+          await reply("Usage: " + PREFIX + "statusseen on|off. Current: " + (statusAutoSeen ? "ON 👀" : "OFF"));
+          continue;
+        }
+        statusAutoSeen = value === "on";
+        await reply(statusAutoSeen ? "👀 Status Auto-Seen ON!" : "Status Auto-Seen OFF.");
       } else if (command === "statusreact") {
         if (!isOwner(sender)) { await reply("🔒 ഈ കമാൻഡ് ബോട്ട് ഓണർക്ക് മാത്രം ഉപയോഗിക്കാം."); continue; }
         const value = args[0]?.toLowerCase();
@@ -567,7 +583,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           continue;
         }
         statusAutoReact = value === "on";
-        await reply(statusAutoReact ? "💖 Status Auto-Reaction ON! ❤️💕🥰😍" : "Status Auto-Reaction OFF.");
+        await reply(statusAutoReact ? "💖 Status Auto-Reaction ON! ❤️💖💕💗💘💝💓💞🩷" : "Status Auto-Reaction OFF.");
       } else if (["kick", "promote", "demote"].includes(command)) {
         if (!isGroup(chat)) { await reply("This command works only in a group."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
