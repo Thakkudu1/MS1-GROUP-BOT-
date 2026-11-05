@@ -117,18 +117,32 @@ function getText(msg) {
     "";
 }
 
+// The repository stores the JPEG as Base64 text. Decode it once and verify
+// the JPEG signature so an invalid text file is never sent as an image.
 const MS1_LOGO_PATH = require("path").join(__dirname, "assets", "ms1-logo.jpg.b64");
 let MS1_LOGO_BUFFER = null;
 try {
-  MS1_LOGO_BUFFER = Buffer.from(fs.readFileSync(MS1_LOGO_PATH, "utf8").trim(), "base64");
+  const logoBase64 = fs.readFileSync(MS1_LOGO_PATH, "utf8").replace(/\\s/g, "");
+  const decodedLogo = Buffer.from(logoBase64, "base64");
+  const isJpeg = decodedLogo.length > 4 &&
+    decodedLogo[0] === 0xff && decodedLogo[1] === 0xd8 &&
+    decodedLogo[decodedLogo.length - 2] === 0xff && decodedLogo[decodedLogo.length - 1] === 0xd9;
+  if (!isJpeg) throw new Error("Logo asset is not a complete JPEG image");
+  MS1_LOGO_BUFFER = decodedLogo;
+  console.log("[MS1 LOGO] JPEG loaded and validated:", decodedLogo.length, "bytes");
 } catch (e) {
-  console.error("[MS1 LOGO] Could not load logo asset:", e.message);
+  console.error("[MS1 LOGO] Logo unavailable; check assets/ms1-logo.jpg.b64:", e.message);
 }
 async function sendMs1LogoNotice(chat, caption, quoted) {
-  const payload = MS1_LOGO_BUFFER
-    ? { image: MS1_LOGO_BUFFER, caption }
-    : { text: caption };
-  await sock.sendMessage(chat, payload, quoted ? { quoted } : {}).catch(e =>
+  if (!MS1_LOGO_BUFFER) {
+    await sock.sendMessage(chat, { text: caption }, quoted ? { quoted } : {}).catch(() => {});
+    return;
+  }
+  await sock.sendMessage(chat, {
+    image: MS1_LOGO_BUFFER,
+    mimetype: "image/jpeg",
+    caption
+  }, quoted ? { quoted } : {}).catch(e =>
     console.error("[COMMAND PERMISSION] Notice failed:", e?.message || e)
   );
 }
@@ -230,9 +244,13 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         }
         // Send the compact MS1 brand logo as a separate image directly below the welcome notice.
         if (MS1_LOGO_BUFFER) {
-          await sock.sendMessage(event.id, { image: MS1_LOGO_BUFFER }).catch(e =>
-            console.error("[WELCOME LOGO] Send failed:", e?.message || e)
-          );
+          await sock.sendMessage(event.id, {
+            image: MS1_LOGO_BUFFER,
+            mimetype: "image/jpeg",
+            caption: "MS ONE • TECH CREW"
+          }).catch(e => console.error("[WELCOME LOGO] Send failed:", e?.message || e));
+        } else {
+          console.error("[WELCOME LOGO] Skipped: logo file did not pass JPEG validation.");
         }
       } else if (event.action === "remove") {
         const goodbyeText = "😂 ഇറങ്ങിപ്പോടാ പുള്ളെ! 👋\n\n@" + senderNumber(participant) + " ഗ്രൂപ്പിൽ നിന്ന് പുറത്തുപോയി. 🚪";
