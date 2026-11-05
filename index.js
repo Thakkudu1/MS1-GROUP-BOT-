@@ -122,7 +122,7 @@ function getText(msg) {
 const MS1_LOGO_PATH = require("path").join(__dirname, "assets", "ms1-logo.jpg.b64");
 let MS1_LOGO_BUFFER = null;
 try {
-  const logoBase64 = fs.readFileSync(MS1_LOGO_PATH, "utf8").replace(/\\s/g, "");
+  const logoBase64 = fs.readFileSync(MS1_LOGO_PATH, "utf8").replace(/\s/g, "");
   const decodedLogo = Buffer.from(logoBase64, "base64");
   const isJpeg = decodedLogo.length > 4 &&
     decodedLogo[0] === 0xff && decodedLogo[1] === 0xd8 &&
