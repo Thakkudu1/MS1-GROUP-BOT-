@@ -42,6 +42,7 @@ function recordGroupMessage(chat, sender, displayName) {
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
 let restarting = false;
+let reconnectTimer = null;
 let pairingReady = false;
 let pairingReadyWaiters = [];
 let latestQr = null;
@@ -126,42 +127,58 @@ async function startBot() {
 
   sock.ev.on("creds.update", saveCreds);
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
-    const statusCode = lastDisconnect?.error?.output?.statusCode;
+    const disconnectError = lastDisconnect?.error;
+    const statusCode = disconnectError?.output?.statusCode;
+    const errorText = String(disconnectError?.message || disconnectError || "");
+    const badMac = /bad\\s*mac|mac\\s*error|decrypt.*session/i.test(errorText);
+
     if (connection || qr || lastDisconnect) {
       console.log("WA state=" + (connection || "connecting") +
         " code=" + (statusCode || "-") +
         " qr=" + Boolean(qr) +
-        " error=" + String(lastDisconnect?.error?.message || "-").slice(0, 140));
+        " error=" + errorText.slice(0, 140));
     }
     if (qr) { markPairingReady(); publishQr(qr); }
-    if (connection === "open" || connection === "close") { pairingReady = false; clearQr(); }
+    if (connection === "open" || connection === "close") {
+      pairingReady = false;
+      clearQr();
+    }
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
-      console.log("\nScan this QR from WhatsApp > Linked devices:\n");
+      console.log("\\nScan this QR from WhatsApp > Linked devices:\\n");
       qrcode.generate(qr, { small: true });
     }
     if (connection === "open") {
       restarting = false;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
       console.log("MS1 GROUP BOT connected.");
+      return;
     }
-    if (connection === "close" && !restarting) {
-      if (statusCode === DisconnectReason.loggedOut) {
-        restarting = true;
-        console.log("WhatsApp logged out; clearing stale session and restarting for a new pairing.");
-        try {
+    if (connection !== "close" || restarting) return;
+
+    // Allow only one reconnect at a time. Multiple sockets writing the same
+    // multi-file auth state can corrupt Signal keys and cause repeated Bad MAC errors.
+    restarting = true;
+    const resetSession = statusCode === DisconnectReason.loggedOut || badMac;
+    console.log(resetSession
+      ? "WhatsApp auth session is invalid; resetting only the WhatsApp session before fresh pairing."
+      : "WhatsApp connection closed; scheduling one reconnect.");
+
+    reconnectTimer = setTimeout(async () => {
+      reconnectTimer = null;
+      try {
+        if (resetSession) {
           fs.rmSync(SESSION_DIR, { recursive: true, force: true });
           fs.mkdirSync(SESSION_DIR, { recursive: true });
-        } catch (e) {
-          console.error("Could not reset WhatsApp session:", e.message);
         }
-        setTimeout(() => startBot().catch(err => {
-          restarting = false;
-          console.error("WhatsApp restart failed:", err);
-        }), 1500);
-      } else {
-        console.log("WhatsApp connection closed; reconnecting...");
-        setTimeout(() => startBot().catch(err => console.error("WhatsApp reconnect failed:", err)), 3000);
+        await startBot();
+      } catch (err) {
+        restarting = false;
+        console.error("WhatsApp restart failed:", err?.message || err);
       }
-    }
+    }, resetSession ? 2500 : 5000);
   });
 
   sock.ev.on("group-participants.update", async (event) => {
