@@ -46,6 +46,7 @@ let reconnectTimer = null;
 let pairingReady = false;
 let pairingReadyWaiters = [];
 let latestQr = null;
+let latestQrAt = 0;
 let qrWaiters = [];
 
 function waitForPairingReady(timeoutMs = 20000) {
@@ -59,8 +60,8 @@ function waitForPairingReady(timeoutMs = 20000) {
     pairingReadyWaiters.push(waiter);
   });
 }
-function waitForQr(timeoutMs = 20000) {
-  if (latestQr) return Promise.resolve(latestQr);
+function waitForQr(timeoutMs = 30000) {
+  if (latestQr && Date.now() - latestQrAt < 10000) return Promise.resolve(latestQr);
   return new Promise(resolve => {
     const waiter = { resolve, timer: null };
     waiter.timer = setTimeout(() => {
@@ -72,6 +73,8 @@ function waitForQr(timeoutMs = 20000) {
 }
 function publishQr(qr) {
   latestQr = qr;
+  latestQrAt = Date.now();
+  console.log('WhatsApp QR generated; fresh QR available for a short time.');
   const waiters = qrWaiters;
   qrWaiters = [];
   for (const waiter of waiters) {
@@ -79,7 +82,7 @@ function publishQr(qr) {
     waiter.resolve(qr);
   }
 }
-function clearQr() { latestQr = null; }
+function clearQr() { latestQr = null; latestQrAt = 0; }
 
 function markPairingReady() {
   pairingReady = true;
