@@ -21,7 +21,7 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
       try {
         if (command === 'start') {
           const reply = authorized(msg)
-            ? '👑 MS1 GROUP BOT\n\nSend /qr to receive a WhatsApp QR image, or /pair to use a pairing code.'
+            ? '👑 MS1 GROUP BOT\n\nSend /qr to receive a fresh QR for WhatsApp Business, or /pair to use a pairing code.'
             : 'MS1 GROUP BOT\nYour Telegram ID: ' + String(msg.from && msg.from.id || '') + '\nAsk the owner to set TELEGRAM_OWNER_ID to this ID.';
           await bot.sendMessage(msg.chat.id, reply);
           console.log('Telegram /start reply sent.');
@@ -49,7 +49,7 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
             errorCorrectionLevel: 'H'
           });
           await bot.sendDocument(msg.chat.id, image, {
-            caption: 'MS1 GROUP BOT — ORIGINAL FRESH WhatsApp QR (uncompressed file)\nOpen/download this PNG and scan it immediately: WhatsApp → Linked devices → Link a device. Keep both phones online. QR expires quickly; request /qr again if it fails. Do not share this QR.'
+            caption: 'MS1 GROUP BOT — FRESH QR FOR WHATSAPP BUSINESS (uncompressed PNG)\nOpen this PNG and scan it immediately from WhatsApp Business → ⋮ → Linked devices → Link a device. Keep WhatsApp Business and the bot online. This QR expires quickly; if it fails, send /qr again for a NEW QR. Do not share this QR.'
           }, {
             filename: 'MS1-WhatsApp-QR.png',
             contentType: 'image/png'
