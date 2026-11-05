@@ -10,7 +10,6 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
   }
   const bot = new TelegramBot(token, { polling: { autoStart: true, params: { timeout: 30 } } });
   let busy = false;
-  const command = (name) => new RegExp('^\\\\/' + name + '(?:@\\\\w+)?(?:\\\\s|$)', 'i');
   const authorized = (msg) => ownerId && String(msg.from && msg.from.id || '') === ownerId;
   bot.onText(/^\/start$/, async (msg) => {
     if (!authorized(msg)) {
