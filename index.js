@@ -116,6 +116,22 @@ function getText(msg) {
     m.listResponseMessage?.singleSelectReply?.selectedRowId ||
     "";
 }
+
+const MS1_LOGO_PATH = require("path").join(__dirname, "assets", "ms1-logo.jpg.b64");
+let MS1_LOGO_BUFFER = null;
+try {
+  MS1_LOGO_BUFFER = Buffer.from(fs.readFileSync(MS1_LOGO_PATH, "utf8").trim(), "base64");
+} catch (e) {
+  console.error("[MS1 LOGO] Could not load logo asset:", e.message);
+}
+async function sendMs1LogoNotice(chat, caption, quoted) {
+  const payload = MS1_LOGO_BUFFER
+    ? { image: MS1_LOGO_BUFFER, caption }
+    : { text: caption };
+  await sock.sendMessage(chat, payload, quoted ? { quoted } : {}).catch(e =>
+    console.error("[COMMAND PERMISSION] Notice failed:", e?.message || e)
+  );
+}
 async function startBot() {
   pairingReady = false;
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
@@ -211,6 +227,12 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           });
         } else {
           await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
+        }
+        // Send the compact MS1 brand logo as a separate image directly below the welcome notice.
+        if (MS1_LOGO_BUFFER) {
+          await sock.sendMessage(event.id, { image: MS1_LOGO_BUFFER }).catch(e =>
+            console.error("[WELCOME LOGO] Send failed:", e?.message || e)
+          );
         }
       } else if (event.action === "remove") {
         const goodbyeText = "😂 ഇറങ്ങിപ്പോടാ പുള്ളെ! 👋\n\n@" + senderNumber(participant) + " ഗ്രൂപ്പിൽ നിന്ന് പുറത്തുപോയി. 🚪";
@@ -522,10 +544,23 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
       const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
-      // Statistics commands are available to group members; other commands remain owner-only.
-      if (command && !isOwner(sender) && !["topchat", "mystats", "antilink", "antidelete", "antispam", "securityalerts", "welcome"].includes(command)) {
-        await reply("🔒 ഈ കമാൻഡ് ഉപയോഗിക്കാൻ ബോട്ട് ഓണർക്ക് മാത്രം അനുവാദമുണ്ട്.");
-        continue;
+      // Group commands require the bot owner or a WhatsApp group admin.
+      // In private chats, only the configured bot owner may use commands.
+      if (command && !isOwner(sender)) {
+        if (command === "statusseen" || command === "statusreact" || !isGroup(chat)) {
+          await sendMs1LogoNotice(chat, "Only bot owner can use this command.", msg);
+          continue;
+        }
+        const permissionMeta = await sock.groupMetadata(chat).catch(() => null);
+        const senderIsGroupAdmin = Boolean(permissionMeta?.participants?.some(p =>
+          [p.id, p.phoneNumber, p.lid].filter(Boolean)
+            .some(id => jidNormalizedUser(id) === jidNormalizedUser(sender)) &&
+          (p.admin === "admin" || p.admin === "superadmin")
+        ));
+        if (!senderIsGroupAdmin) {
+          await sendMs1LogoNotice(chat, "Only group admin or bot owner can use this command.", msg);
+          continue;
+        }
       }
       if (command === "topchat" && isGroup(chat)) {
         const ranking = Object.entries(MESSAGE_COUNTS[chat] || {}).map(([jid, stats]) => ({ jid, name: stats.name || senderNumber(jid), count: Number(stats.count) || 0 })).sort((a, b) => b.count - a.count).slice(0, 10);
