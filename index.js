@@ -555,7 +555,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}antispam on|off (admins)
 │ ${PREFIX}securityalerts on|off (link/spam admin alerts)
 │ ${PREFIX}welcome on|off (admins)
-│ ${PREFIX}statusreact on|off (owner; heart reactions to statuses)
+│ ${PREFIX}statusreact on|off (owner; heart-only status reactions)
+│ ${PREFIX}statusseen on|off (owner; auto-view statuses)
 │ ${PREFIX}rules [text] (admins)
 │ ${PREFIX}ping / ${PREFIX}alive / ${PREFIX}owner
 ╰ Settings reset when the bot restarts`
