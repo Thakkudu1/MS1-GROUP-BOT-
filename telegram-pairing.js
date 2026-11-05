@@ -8,7 +8,7 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
     console.log('Telegram pairing disabled: set TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID.');
     return;
   }
-  const bot = new TelegramBot(token, { polling: { autoStart: true, params: { timeout: 30 } } });
+  const bot = new TelegramBot(token);
   let busy = false;
   const authorized = (msg) => ownerId && String(msg.from && msg.from.id || '') === ownerId;
   bot.onText(/^\/start(?:@\w+)?(?:\s|$)/i, async (msg) => {
@@ -79,7 +79,14 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
       console.log('Telegram command received:', text.split(/[\\s@]/)[0], 'from user', String(msg.from && msg.from.id || 'unknown'));
     }
   });
-  console.log('Telegram control bot started; polling enabled.');
+  bot.getMe().then((me) => {
+    console.log('Telegram bot identity verified:', '@' + (me.username || 'unknown'));
+  }).catch((e) => console.error('Telegram getMe failed:', e.message));
+  bot.startPolling().then(() => {
+    console.log('Telegram polling started successfully.');
+  }).catch((e) => {
+    console.error('Telegram polling could not start:', e.message);
+  });
 }
 
 module.exports = { startTelegram };
