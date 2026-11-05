@@ -130,7 +130,7 @@ async function startBot() {
     const disconnectError = lastDisconnect?.error;
     const statusCode = disconnectError?.output?.statusCode;
     const errorText = String(disconnectError?.message || disconnectError || "");
-    const badMac = /bad\\s*mac|mac\\s*error|decrypt.*session/i.test(errorText);
+    const badMac = /bad\s*mac|mac\s*error|decrypt.*session|invalid.*session/i.test(errorText);
 
     if (connection || qr || lastDisconnect) {
       console.log("WA state=" + (connection || "connecting") +
@@ -161,9 +161,9 @@ async function startBot() {
     // Allow only one reconnect at a time. Multiple sockets writing the same
     // multi-file auth state can corrupt Signal keys and cause repeated Bad MAC errors.
     restarting = true;
-    const resetSession = statusCode === DisconnectReason.loggedOut || badMac;
+    const resetSession = statusCode === 401 || statusCode === DisconnectReason.loggedOut || badMac;
     console.log(resetSession
-      ? "WhatsApp auth session is invalid; resetting only the WhatsApp session before fresh pairing."
+      ? "WhatsApp auth/session error detected (401 or Bad MAC); clearing only WhatsApp auth files and creating a fresh session."
       : "WhatsApp connection closed; scheduling one reconnect.");
 
     reconnectTimer = setTimeout(async () => {
