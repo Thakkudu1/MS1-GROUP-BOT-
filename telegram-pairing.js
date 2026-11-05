@@ -42,11 +42,19 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
             await bot.sendMessage(msg.chat.id, 'WhatsApp QR is not ready yet. Wait for the bot to reconnect, then send /qr again.');
             return;
           }
-          const image = await QRCode.toBuffer(qr, { type: 'png', width: 700, margin: 2 });
-          await bot.sendPhoto(msg.chat.id, image, {
-            caption: 'MS1 GROUP BOT — FRESH WhatsApp QR\nScan immediately (within 10 seconds): WhatsApp → Linked devices → Link a device. Keep both phones online and WhatsApp updated. Do not share this QR.'
+          const image = await QRCode.toBuffer(qr, {
+            type: 'png',
+            width: 1200,
+            margin: 4,
+            errorCorrectionLevel: 'H'
           });
-          console.log('Fresh WhatsApp QR image sent to Telegram user', String(msg.from && msg.from.id || 'unknown'));
+          await bot.sendDocument(msg.chat.id, image, {
+            caption: 'MS1 GROUP BOT — ORIGINAL FRESH WhatsApp QR (uncompressed file)\nOpen/download this PNG and scan it immediately: WhatsApp → Linked devices → Link a device. Keep both phones online. QR expires quickly; request /qr again if it fails. Do not share this QR.'
+          }, {
+            filename: 'MS1-WhatsApp-QR.png',
+            contentType: 'image/png'
+          });
+          console.log('Fresh uncompressed WhatsApp QR document sent to Telegram user', String(msg.from && msg.from.id || 'unknown'));
           return;
         }
         if (command === 'pair') {
