@@ -42,7 +42,7 @@ Telegram ID അറിയാൻ ആദ്യമായി `TELEGRAM_OWNER_ID` ത�
 2. `/pair` അയയ്ക്കുക.
 3. WhatsApp നമ്പർ country code സഹിതം digits മാത്രം അയയ്ക്കുക (ഉദാ. `919876543210`).
 4. Telegram-ൽ ലഭിക്കുന്ന pairing code സ്വകാര്യമായി സൂക്ഷിക്കുക.
-5. WhatsApp തുറക്കുക → **Linked devices** → **Link a device** → **Link with phone number instead** → Telegram-ൽ ലഭിച്ച code നൽകുക.
+5. **WhatsApp Business** തുറക്കുക → മുകളിൽ വലത് വശത്തെ **⋮** → **Linked devices** → **Link a device** → Telegram-ൽ ലഭിച്ച QR ഉടൻ സ്കാൻ ചെയ്യുക. QR പ്രവർത്തിക്കാത്ത പക്ഷം Telegram-ൽ `/qr` വീണ്ടും അയച്ച് പുതിയ QR സ്കാൻ ചെയ്യുക. Pairing code ഉപയോഗിക്കുമ്പോൾ **Link with phone number instead** തിരഞ്ഞെടുക്കുക.
 
 Pairing code/token/session മറ്റാരുമായും പങ്കിടരുത്. ChatGPT-ക്ക് നിങ്ങളുടെ WhatsApp-ൽ നേരിട്ട് pairing പൂർത്തിയാക്കാൻ കഴിയില്ല.
 
