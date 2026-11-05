@@ -11,15 +11,15 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
   const bot = new TelegramBot(token, { polling: { autoStart: true, params: { timeout: 30 } } });
   let busy = false;
   const authorized = (msg) => ownerId && String(msg.from && msg.from.id || '') === ownerId;
-  bot.onText(/^\/start$/, async (msg) => {
+  bot.onText(/^\\/start(?:@\\w+)?(?:\\s|$)/i, async (msg) => {
     if (!authorized(msg)) {
       await bot.sendMessage(msg.chat.id, 'MS1 GROUP BOT\nYour Telegram ID: ' + String(msg.from && msg.from.id || '') + '\nAsk the owner to set TELEGRAM_OWNER_ID to this ID.');
       return;
     }
     await bot.sendMessage(msg.chat.id, '👑 MS1 GROUP BOT\n\nSend /qr to receive a WhatsApp QR image, or /pair to use a pairing code.');
   });
-  bot.onText(/^\/id$/, async (msg) => bot.sendMessage(msg.chat.id, 'Telegram ID: ' + String(msg.from && msg.from.id || '')));
-  bot.onText(/^\/qr$/, async (msg) => {
+  bot.onText(/^\\/id(?:@\\w+)?(?:\\s|$)/i, async (msg) => bot.sendMessage(msg.chat.id, 'Telegram ID: ' + String(msg.from && msg.from.id || '')));
+  bot.onText(/^\\/qr(?:@\\w+)?(?:\\s|$)/i, async (msg) => {
     if (!authorized(msg)) return bot.sendMessage(msg.chat.id, 'Not authorized.');
     try {
       let qr = getCurrentQr();
@@ -38,7 +38,7 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
     }
   });
 
-  bot.onText(/^\/pair$/, async (msg) => {
+  bot.onText(/^\\/pair(?:@\\w+)?(?:\\s|$)/i, async (msg) => {
     if (!authorized(msg)) return bot.sendMessage(msg.chat.id, 'Not authorized. Use /id and ask the owner to configure TELEGRAM_OWNER_ID.');
     await bot.sendMessage(msg.chat.id, 'Send your WhatsApp phone number with country code (digits only, e.g. 919876543210).');
   });
