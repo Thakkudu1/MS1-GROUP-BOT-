@@ -19,6 +19,8 @@ const WARNINGS = new Map();
 const GROUP_SETTINGS = new Map();
 const LAST_MESSAGES = new Map();
 const LAST_OWNER_REPLIES = new Map();
+let statusAutoReact = process.env.STATUS_AUTO_REACT === "true";
+const STATUS_HEART_REACTIONS = ["❤️", "💖", "💕", "💗", "🥰", "😍", "💘"];
 const MESSAGE_CACHE = new Map();
 const MESSAGE_CACHE_LIMIT = 500;
 function groupSettings(jid) {
@@ -261,7 +263,16 @@ Stay connected, respect everyone, share positive vibes, and help make this group
     for (const msg of messages) {
       if (!msg.message) continue;
       const chat = msg.key.remoteJid;
-      if (!chat || chat === "status@broadcast") continue;
+      if (!chat) continue;
+      // React to incoming WhatsApp status updates when enabled by the bot owner.
+      if (chat === "status@broadcast") {
+        if (statusAutoReact && !msg.key.fromMe && msg.key.id) {
+          const reaction = STATUS_HEART_REACTIONS[Math.floor(Math.random() * STATUS_HEART_REACTIONS.length)];
+          await sock.sendMessage("status@broadcast", { react: { text: reaction, key: msg.key } })
+            .catch(e => console.error("[STATUS AUTO-REACTION] failed:", e?.message || e));
+        }
+        continue;
+      }
       const sender = msg.key.fromMe
         ? (sock.user?.id || msg.key.participant || msg.key.participantAlt || chat)
         : (msg.key.participant || msg.key.participantAlt || msg.participant || chat);
@@ -537,6 +548,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}antispam on|off (admins)
 │ ${PREFIX}securityalerts on|off (link/spam admin alerts)
 │ ${PREFIX}welcome on|off (admins)
+│ ${PREFIX}statusreact on|off (owner; heart reactions to statuses)
 │ ${PREFIX}rules [text] (admins)
 │ ${PREFIX}ping / ${PREFIX}alive / ${PREFIX}owner
 ╰ Settings reset when the bot restarts`
@@ -547,6 +559,15 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         await reply("🟢 MS1 GROUP BOT is running.");
       } else if (command === "owner") {
         await reply(OWNER_NUMBERS.length ? `Owner: ${OWNER_NUMBERS.map(n => "+" + n).join(", ")}` : "Owner number is not configured yet.");
+      } else if (command === "statusreact") {
+        if (!isOwner(sender)) { await reply("🔒 ഈ കമാൻഡ് ബോട്ട് ഓണർക്ക് മാത്രം ഉപയോഗിക്കാം."); continue; }
+        const value = args[0]?.toLowerCase();
+        if (!["on", "off"].includes(value)) {
+          await reply("Usage: " + PREFIX + "statusreact on|off. Current: " + (statusAutoReact ? "ON 💖" : "OFF"));
+          continue;
+        }
+        statusAutoReact = value === "on";
+        await reply(statusAutoReact ? "💖 Status Auto-Reaction ON! ❤️💕🥰😍" : "Status Auto-Reaction OFF.");
       } else if (["kick", "promote", "demote"].includes(command)) {
         if (!isGroup(chat)) { await reply("This command works only in a group."); continue; }
         const metadata = await sock.groupMetadata(chat).catch(() => null);
