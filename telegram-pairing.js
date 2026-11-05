@@ -8,8 +8,9 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
     console.log('Telegram pairing disabled: set TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID.');
     return;
   }
-  const bot = new TelegramBot(token, { polling: true });
+  const bot = new TelegramBot(token, { polling: { autoStart: true, params: { timeout: 30 } } });
   let busy = false;
+  const command = (name) => new RegExp('^\\\\/' + name + '(?:@\\\\w+)?(?:\\\\s|$)', 'i');
   const authorized = (msg) => ownerId && String(msg.from && msg.from.id || '') === ownerId;
   bot.onText(/^\/start$/, async (msg) => {
     if (!authorized(msg)) {
@@ -72,7 +73,14 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurren
     } finally { busy = false; }
   });
   bot.on('polling_error', (e) => console.error('Telegram polling error:', e.message));
-  console.log('Telegram control bot started.');
+  bot.on('error', (e) => console.error('Telegram bot error:', e.message));
+  bot.on('message', (msg) => {
+    const text = String(msg.text || '');
+    if (text.startsWith('/')) {
+      console.log('Telegram command received:', text.split(/[\\s@]/)[0], 'from user', String(msg.from && msg.from.id || 'unknown'));
+    }
+  });
+  console.log('Telegram control bot started; polling enabled.');
 }
 
 module.exports = { startTelegram };
