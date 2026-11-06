@@ -603,23 +603,16 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1)
             : text.trim().split(/\s+/).slice(1))
         : [];
-      // STRICT OWNER-ONLY COMMAND ACCESS: every recognized command is restricted
-      // to numbers configured in OWNER_NUMBERS, including help and utility commands.
-      if (command && !isOwner(sender, [
-        msg.key.participant,
-        msg.key.participantAlt,
-        msg.participant,
-        chat
-      ])) {
-        console.log("[COMMAND AUTH] denied", JSON.stringify({
-          sender,
-          participant: msg.key.participant || null,
-          participantAlt: msg.key.participantAlt || null,
-          connectedId: sock?.user?.id || null,
-          connectedLid: sock?.user?.lid || null,
-          command
+      // Keep private owner-only controls restricted, but let group admins use
+      // the admin-protected moderation/settings commands below. Public utility
+      // commands (menu, ping, alive, topchat, mystats, rules read) remain usable.
+      if (["owner", "statusseen", "statusreact"].includes(command) &&
+          !isOwner(sender, [msg.key.participant, msg.key.participantAlt, msg.participant, chat])) {
+        console.log("[COMMAND AUTH] owner-only command denied", JSON.stringify({
+          sender, participant: msg.key.participant || null,
+          participantAlt: msg.key.participantAlt || null, command
         }));
-        await sendMs1LogoNotice(chat, "🔒 Only the MS1 GROUP BOT owner can use commands.", msg);
+        await sendMs1LogoNotice(chat, "🔒 ഈ കമാൻഡ് MS1 GROUP BOT ഉടമയ്ക്ക് മാത്രം ഉപയോഗിക്കാം.", msg);
         continue;
       }
       if (command === "topchat" && isGroup(chat)) {
