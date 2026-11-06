@@ -44,6 +44,7 @@ function recordGroupMessage(chat, sender, displayName) {
 }
 fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
+let whatsappConnected = false;
 let restarting = false;
 let reconnectTimer = null;
 let pairingReady = false;
@@ -208,6 +209,7 @@ async function startBot() {
     }
     if (qr) { markPairingReady(); publishQr(qr); }
     if (connection === "open" || connection === "close") {
+      whatsappConnected = connection === "open";
       pairingReady = false;
       clearQr();
     }
@@ -332,6 +334,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
   });
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    console.log("[INCOMING EVENT]", JSON.stringify({ type, count: (messages || []).length, connected: whatsappConnected }));
     if (type !== "notify") return;
     for (const msg of messages) {
       if (!msg.message) continue;
@@ -371,6 +374,19 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         recordGroupMessage(chat, sender, msg.pushName || senderNumber(sender));
       }
       if (!text) continue;
+
+      // Fast-path ping before group metadata and mention processing.
+      const normalizedPing = text.trim().toLowerCase();
+      if (normalizedPing === PREFIX.toLowerCase() + "ping" || normalizedPing === "ping") {
+        console.log("[COMMAND] ping received", JSON.stringify({ chat, fromMe: Boolean(msg.key.fromMe), sender, prefix: PREFIX }));
+        try {
+          await sock.sendMessage(chat, { text: "Pong! 🟢 MS1 GROUP BOT is online." }, { quoted: msg });
+          console.log("[COMMAND] ping reply sent", chat);
+        } catch (e) {
+          console.error("[COMMAND] ping reply failed:", e?.stack || e?.message || e);
+        }
+        continue;
+      }
 
       // Grill Arabia customer auto-replies in private chats only.
       if (!isGroup(chat) && !msg.key.fromMe) {
