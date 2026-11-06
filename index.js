@@ -583,9 +583,12 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1)
             : text.trim().split(/\s+/).slice(1))
         : [];
-      // Public utility commands are available to all group members.
-      // Sensitive moderation and settings commands enforce owner/admin permissions
-      // inside their own handlers below; do not block .menu/.help/.ping/.topchat here.
+      // STRICT OWNER-ONLY COMMAND ACCESS: every recognized command is restricted
+      // to numbers configured in OWNER_NUMBERS, including help and utility commands.
+      if (command && !isOwner(sender)) {
+        await sendMs1LogoNotice(chat, "🔒 Only the MS1 GROUP BOT owner can use commands.", msg);
+        continue;
+      }
       if (command === "topchat" && isGroup(chat)) {
         const ranking = Object.entries(MESSAGE_COUNTS[chat] || {}).map(([jid, stats]) => ({ jid, name: stats.name || senderNumber(jid), count: Number(stats.count) || 0 })).sort((a, b) => b.count - a.count).slice(0, 10);
         if (!ranking.length) await reply("📊 ഇതുവരെ ഗ്രൂപ്പ് മെസ്സേജുകൾ കണക്കാക്കിയിട്ടില്ല.");
