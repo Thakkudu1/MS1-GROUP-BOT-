@@ -105,8 +105,20 @@ function isOwner(jid) {
   return OWNER_NUMBERS.includes(n);
 }
 function isGroup(jid = "") { return jid.endsWith("@g.us"); }
+function unwrapMessageContent(message) {
+  let current = message || {};
+  for (let i = 0; i < 5; i++) {
+    const nested = current.ephemeralMessage?.message ||
+      current.viewOnceMessage?.message ||
+      current.viewOnceMessageV2?.message ||
+      current.documentWithCaptionMessage?.message;
+    if (!nested) break;
+    current = nested;
+  }
+  return current;
+}
 function getText(msg) {
-  const m = msg.message || {};
+  const m = unwrapMessageContent(msg.message);
   return m.conversation ||
     m.extendedTextMessage?.text ||
     m.imageMessage?.caption ||
@@ -303,6 +315,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
     if (type !== "notify") return;
     for (const msg of messages) {
       if (!msg.message) continue;
+      // Unwrap WhatsApp ephemeral/view-once wrappers before parsing commands and mentions.
+      msg.message = unwrapMessageContent(msg.message);
       const chat = msg.key.remoteJid;
       if (!chat) continue;
       // Automatically view incoming statuses and react with heart emojis only.
@@ -559,27 +573,19 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       }
 
       const reply = (body) => sock.sendMessage(chat, { text: body }, { quoted: msg });
+      const safePlainCommands = new Set(["menu", "help", "ping", "alive", "owner", "topchat", "mystats", "rules"]);
+      const firstWord = text.trim().split(/\s+/)[0].toLowerCase();
       const command = text.startsWith(PREFIX)
-        ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase() : "";
-      const args = command ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1) : [];
-      // Group commands require the bot owner or a WhatsApp group admin.
-      // In private chats, only the configured bot owner may use commands.
-      if (command && !isOwner(sender)) {
-        if (command === "statusseen" || command === "statusreact" || !isGroup(chat)) {
-          await sendMs1LogoNotice(chat, "Only bot owner can use this command.", msg);
-          continue;
-        }
-        const permissionMeta = await sock.groupMetadata(chat).catch(() => null);
-        const senderIsGroupAdmin = Boolean(permissionMeta?.participants?.some(p =>
-          [p.id, p.phoneNumber, p.lid].filter(Boolean)
-            .some(id => jidNormalizedUser(id) === jidNormalizedUser(sender)) &&
-          (p.admin === "admin" || p.admin === "superadmin")
-        ));
-        if (!senderIsGroupAdmin) {
-          await sendMs1LogoNotice(chat, "Only group admin or bot owner can use this command.", msg);
-          continue;
-        }
-      }
+        ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase()
+        : (safePlainCommands.has(firstWord) ? firstWord : "");
+      const args = command
+        ? (text.startsWith(PREFIX)
+            ? text.slice(PREFIX.length).trim().split(/\s+/).slice(1)
+            : text.trim().split(/\s+/).slice(1))
+        : [];
+      // Public utility commands are available to all group members.
+      // Sensitive moderation and settings commands enforce owner/admin permissions
+      // inside their own handlers below; do not block .menu/.help/.ping/.topchat here.
       if (command === "topchat" && isGroup(chat)) {
         const ranking = Object.entries(MESSAGE_COUNTS[chat] || {}).map(([jid, stats]) => ({ jid, name: stats.name || senderNumber(jid), count: Number(stats.count) || 0 })).sort((a, b) => b.count - a.count).slice(0, 10);
         if (!ranking.length) await reply("📊 ഇതുവരെ ഗ്രൂപ്പ് മെസ്സേജുകൾ കണക്കാക്കിയിട്ടില്ല.");
