@@ -102,7 +102,17 @@ function senderNumber(jid = "") {
 }
 function isOwner(jid) {
   const n = senderNumber(jid);
-  return OWNER_NUMBERS.includes(n);
+  const connectedAccount = sock?.user?.id || "";
+  const connectedNumber = senderNumber(connectedAccount);
+  // The WhatsApp account currently linked to this bot is always the primary owner.
+  // OWNER_NUMBERS remains available for explicitly configured additional owners.
+  const sameAsConnectedAccount = Boolean(
+    jid && connectedAccount &&
+    jidNormalizedUser(jid) === jidNormalizedUser(connectedAccount)
+  );
+  return sameAsConnectedAccount ||
+    (n && OWNER_NUMBERS.includes(n)) ||
+    (connectedNumber && n === connectedNumber);
 }
 function isGroup(jid = "") { return jid.endsWith("@g.us"); }
 function unwrapMessageContent(message) {
