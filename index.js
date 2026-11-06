@@ -100,19 +100,29 @@ function markPairingReady() {
 function senderNumber(jid = "") {
   return jid.split("@")[0].split(":")[0].replace(/\D/g, "");
 }
-function isOwner(jid) {
-  const n = senderNumber(jid);
-  const connectedAccount = sock?.user?.id || "";
-  const connectedNumber = senderNumber(connectedAccount);
-  // The WhatsApp account currently linked to this bot is always the primary owner.
-  // OWNER_NUMBERS remains available for explicitly configured additional owners.
-  const sameAsConnectedAccount = Boolean(
-    jid && connectedAccount &&
-    jidNormalizedUser(jid) === jidNormalizedUser(connectedAccount)
+function isOwner(jid, alternateJids = []) {
+  // WhatsApp groups may identify the same account with either a phone-number JID
+  // or a Linked Identity (LID). Check both participant fields against both
+  // identities exposed by the connected account.
+  const senderJids = [jid, ...alternateJids].filter(Boolean);
+  const ownerJids = [sock?.user?.id, sock?.user?.lid].filter(Boolean);
+  const sameAsConnectedAccount = senderJids.some(senderJid =>
+    ownerJids.some(ownerJid =>
+      jidNormalizedUser(senderJid) === jidNormalizedUser(ownerJid)
+    )
   );
+  const connectedNumbers = ownerJids
+    .filter(value => /@(s\.whatsapp\.net|c\.us)$/.test(value))
+    .map(senderNumber)
+    .filter(Boolean);
+  const senderNumbers = senderJids
+    .filter(value => /@(s\.whatsapp\.net|c\.us)$/.test(value))
+    .map(senderNumber)
+    .filter(Boolean);
   return sameAsConnectedAccount ||
-    (n && OWNER_NUMBERS.includes(n)) ||
-    (connectedNumber && n === connectedNumber);
+    senderNumbers.some(number =>
+      OWNER_NUMBERS.includes(number) || connectedNumbers.includes(number)
+    );
 }
 function isGroup(jid = "") { return jid.endsWith("@g.us"); }
 function unwrapMessageContent(message) {
@@ -595,7 +605,20 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         : [];
       // STRICT OWNER-ONLY COMMAND ACCESS: every recognized command is restricted
       // to numbers configured in OWNER_NUMBERS, including help and utility commands.
-      if (command && !isOwner(sender)) {
+      if (command && !isOwner(sender, [
+        msg.key.participant,
+        msg.key.participantAlt,
+        msg.participant,
+        chat
+      ])) {
+        console.log("[COMMAND AUTH] denied", JSON.stringify({
+          sender,
+          participant: msg.key.participant || null,
+          participantAlt: msg.key.participantAlt || null,
+          connectedId: sock?.user?.id || null,
+          connectedLid: sock?.user?.lid || null,
+          command
+        }));
         await sendMs1LogoNotice(chat, "🔒 Only the MS1 GROUP BOT owner can use commands.", msg);
         continue;
       }
