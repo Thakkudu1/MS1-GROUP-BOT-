@@ -48,6 +48,8 @@ let whatsappConnected = false;
 let restarting = false;
 let starting = false;
 let reconnectAttempts = 0;
+let lastIncomingMessageAt = null;
+let messageProcessingErrors = 0;
 let reconnectTimer = null;
 let pairingReady = false;
 let pairingReadyWaiters = [];
@@ -402,6 +404,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
     console.log("[INCOMING EVENT]", JSON.stringify({ type, count: (messages || []).length, connected: whatsappConnected }));
     if (type !== "notify") return;
     for (const msg of messages) {
+      try {
+      lastIncomingMessageAt = new Date().toISOString();
       if (!msg.message) continue;
       // Unwrap WhatsApp ephemeral/view-once wrappers before parsing commands and mentions.
       msg.message = unwrapMessageContent(msg.message);
@@ -814,6 +818,17 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       } else if (command) {
         await reply(`Unknown command. Send ${PREFIX}menu to see available commands.`);
       }
+      } catch (messageError) {
+        messageProcessingErrors += 1;
+        console.error("[MESSAGE PROCESSING] One message failed; continuing with the next message:", messageError?.stack || messageError?.message || messageError);
+        try {
+          if (msg?.key?.remoteJid && sock === currentSocket && whatsappConnected) {
+            await sock.sendMessage(msg.key.remoteJid, { text: "⚠️ ഈ മെസ്സേജ് പ്രോസസ് ചെയ്യുമ്പോൾ താൽക്കാലിക പ്രശ്നം ഉണ്ടായി. വീണ്ടും ശ്രമിക്കുക." });
+          }
+        } catch (replyError) {
+          console.error("[MESSAGE PROCESSING] Could not send recovery notice:", replyError?.message || replyError);
+        }
+      }
     }
   });
   starting = false;
@@ -829,6 +844,8 @@ const server = http.createServer((req, res) => {
       starting,
       reconnecting: restarting,
       reconnectAttempts,
+      lastIncomingMessageAt,
+      messageProcessingErrors,
       sessionStorage: SESSION_DIR
     }) + "\n");
     return;
