@@ -371,11 +371,13 @@ async function startBot() {
       reconnectTimer = null;
       try {
         if (loggedOut) {
-          // A 401/logged-out session is invalid. The manual backup remains the
-          // recovery point; all other disconnects retain the existing keys.
-          fs.rmSync(SESSION_DIR, { recursive: true, force: true });
-          fs.mkdirSync(SESSION_DIR, { recursive: true });
-          console.warn("[SESSION] Cleared auth files only after confirmed logged-out/401 status.");
+          // Never delete WhatsApp credentials automatically. A 401/logged-out
+          // response needs owner review and a deliberate fresh QR login. Keeping
+          // the files allows manual recovery/backup and prevents surprise loss.
+          console.error("[SESSION] WhatsApp reports logged out. Existing auth files are preserved; manual review and QR relink may be required.");
+          restarting = false;
+          starting = false;
+          return;
         }
         restarting = false;
         await startBot();
