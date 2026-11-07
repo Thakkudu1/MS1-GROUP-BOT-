@@ -46,6 +46,8 @@ fs.mkdirSync(SESSION_DIR, { recursive: true });
 let sock;
 let whatsappConnected = false;
 let restarting = false;
+let starting = false;
+let reconnectAttempts = 0;
 let reconnectTimer = null;
 let pairingReady = false;
 let pairingReadyWaiters = [];
@@ -180,11 +182,21 @@ async function sendMs1LogoNotice(chat, caption, quoted) {
   );
 }
 async function startBot() {
+  // Never create two sockets at once: concurrent sockets sharing one auth folder
+  // can overwrite Signal keys and trigger Bad MAC/decryption failures.
+  if (starting) {
+    console.log("[START] WhatsApp startup already in progress; duplicate start skipped.");
+    return;
+  }
+  starting = true;
   pairingReady = false;
+
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   let version;
-  try { ({ version } = await fetchLatestBaileysVersion()); } catch {}
-  sock = makeWASocket({
+  try { ({ version } = await fetchLatestBaileysVersion()); }
+  catch (e) { console.warn("[BAILEYS VERSION] Could not fetch latest version; using library default:", e?.message || e); }
+
+  const currentSocket = makeWASocket({
     version,
     auth: state,
     logger: pino({ level: process.env.LOG_LEVEL || "silent" }),
@@ -193,16 +205,23 @@ async function startBot() {
     markOnlineOnConnect: false,
     syncFullHistory: false
   });
+  sock = currentSocket;
 
-  sock.ev.on("creds.update", saveCreds);
-  sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
+  currentSocket.ev.on("creds.update", () => {
+    saveCreds().catch(e => console.error("[SESSION SAVE] Credentials could not be saved:", e?.stack || e?.message || e));
+  });
+
+  currentSocket.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
+    // Ignore events from an old socket after a replacement has been installed.
+    if (sock !== currentSocket) return;
+
     const disconnectError = lastDisconnect?.error;
     const statusCode = disconnectError?.output?.statusCode;
     const errorText = String(disconnectError?.message || disconnectError || "");
-    const badMac = /bad\s*mac|mac\s*error|decrypt.*session|invalid.*session/i.test(errorText);
+    const badMac = /bad\\s*mac|mac\\s*error|decrypt.*session|invalid.*session/i.test(errorText);
 
     if (connection || qr || lastDisconnect) {
-      console.log("WA state=" + (connection || "connecting") +
+      console.log("[WA CONNECTION] state=" + (connection || "connecting") +
         " code=" + (statusCode || "-") +
         " qr=" + Boolean(qr) +
         " error=" + errorText.slice(0, 140));
@@ -219,51 +238,58 @@ async function startBot() {
     }
     if (connection === "open") {
       restarting = false;
+      reconnectAttempts = 0;
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
-      console.log("MS1 GROUP BOT connected.");
+      console.log("[WA CONNECTION] MS1 GROUP BOT connected successfully.");
       return;
     }
     if (connection !== "close" || restarting) return;
 
-    // Allow only one reconnect at a time. Multiple sockets writing the same
-    // multi-file auth state can corrupt Signal keys and cause repeated Bad MAC errors.
     restarting = true;
-    const resetSession = statusCode === 401 || statusCode === DisconnectReason.loggedOut || badMac;
-    console.log(resetSession
-      ? "WhatsApp auth/session error detected (401 or Bad MAC); clearing only WhatsApp auth files and creating a fresh session."
-      : "WhatsApp connection closed; scheduling one reconnect.");
+    // Bad MAC during message decryption is NOT proof that the whole login is
+    // invalid. Preserve auth files and reconnect; only a confirmed logged-out
+    // / 401 response requires a fresh QR session.
+    const loggedOut = statusCode === 401 || statusCode === DisconnectReason.loggedOut;
+    if (badMac) {
+      console.error("[SESSION WARNING] Bad MAC/decryption error detected. Preserving /data/session; no automatic auth deletion.");
+    }
+    const delay = loggedOut ? 2500 : Math.min(5000 * Math.pow(2, reconnectAttempts), 60000);
+    reconnectAttempts = Math.min(reconnectAttempts + 1, 5);
+    console.log(loggedOut
+      ? "[RECONNECT] WhatsApp reports logged out; a fresh QR login will be required."
+      : "[RECONNECT] Scheduling one reconnect in " + delay + " ms; saved session will be preserved.");
 
     reconnectTimer = setTimeout(async () => {
       reconnectTimer = null;
       try {
-        if (resetSession) {
+        if (loggedOut) {
+          // A 401/logged-out session is invalid. The manual backup remains the
+          // recovery point; all other disconnects retain the existing keys.
           fs.rmSync(SESSION_DIR, { recursive: true, force: true });
           fs.mkdirSync(SESSION_DIR, { recursive: true });
+          console.warn("[SESSION] Cleared auth files only after confirmed logged-out/401 status.");
         }
-        // Release the reconnect guard before opening the new socket.
-        // If this new socket also closes before reaching "open", its close
-        // event must be allowed to schedule another reconnect.
         restarting = false;
-        console.log("[RECONNECT] Starting a fresh WhatsApp connection attempt.");
         await startBot();
       } catch (err) {
+        starting = false;
         restarting = false;
-        console.error("WhatsApp restart failed:", err?.stack || err?.message || err);
-        // Do not leave the bot permanently stuck after a failed start.
+        console.error("[RECONNECT] WhatsApp restart failed:", err?.stack || err?.message || err);
         if (!reconnectTimer) {
           reconnectTimer = setTimeout(() => {
             reconnectTimer = null;
             startBot().catch(retryErr => {
+              starting = false;
               restarting = false;
-              console.error("WhatsApp retry start failed:", retryErr?.stack || retryErr?.message || retryErr);
+              console.error("[RECONNECT] Retry failed:", retryErr?.stack || retryErr?.message || retryErr);
             });
           }, 10000);
         }
       }
-    }, resetSession ? 2500 : 5000);
+    }, delay);
   });
 
   sock.ev.on("group-participants.update", async (event) => {
@@ -766,6 +792,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       }
     }
   });
+  starting = false;
 }
 // DormHost expects an HTTP listener on PORT. These endpoints are health checks only.
 const PORT = Number(process.env.PORT || 3000);
