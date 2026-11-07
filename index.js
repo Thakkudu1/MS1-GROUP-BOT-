@@ -8,7 +8,6 @@ const {
 const pino = require("pino");
 const fs = require("fs");
 const http = require("http");
-const qrcode = require("qrcode-terminal");
 const { startTelegram } = require("./telegram-pairing");
 
 const PREFIX = process.env.PREFIX || ".";
@@ -55,9 +54,6 @@ let lastCredsSaveError = null;
 let reconnectTimer = null;
 let pairingReady = false;
 let pairingReadyWaiters = [];
-let latestQr = null;
-let latestQrAt = 0;
-let qrWaiters = [];
 
 // Retry failed startup attempts with capped exponential backoff. This covers
 // transient DNS/network failures before the WhatsApp socket is fully created.
@@ -88,30 +84,6 @@ function waitForPairingReady(timeoutMs = 20000) {
     pairingReadyWaiters.push(waiter);
   });
 }
-function waitForQr(timeoutMs = 30000) {
-  if (latestQr && Date.now() - latestQrAt < 10000) return Promise.resolve(latestQr);
-  return new Promise(resolve => {
-    const waiter = { resolve, timer: null };
-    waiter.timer = setTimeout(() => {
-      qrWaiters = qrWaiters.filter(item => item !== waiter);
-      resolve(null);
-    }, timeoutMs);
-    qrWaiters.push(waiter);
-  });
-}
-function publishQr(qr) {
-  latestQr = qr;
-  latestQrAt = Date.now();
-  console.log('WhatsApp QR generated; fresh QR available for a short time.');
-  const waiters = qrWaiters;
-  qrWaiters = [];
-  for (const waiter of waiters) {
-    clearTimeout(waiter.timer);
-    waiter.resolve(qr);
-  }
-}
-function clearQr() { latestQr = null; latestQrAt = 0; }
-
 function markPairingReady() {
   pairingReady = true;
   const waiters = pairingReadyWaiters;
@@ -268,15 +240,10 @@ async function startBot() {
         " qr=" + Boolean(qr) +
         " error=" + errorText.slice(0, 140));
     }
-    if (qr) { markPairingReady(); publishQr(qr); }
+    if (qr) markPairingReady(); // Internal Baileys pairing signal only; QR is never displayed or sent.
     if (connection === "open" || connection === "close") {
       whatsappConnected = connection === "open";
       pairingReady = false;
-      clearQr();
-    }
-    if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
-      console.log("\nScan this QR from WhatsApp Business > Linked devices:\n");
-      qrcode.generate(qr, { small: true });
     }
     if (connection === "open") {
       restarting = false;
@@ -472,34 +439,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         continue;
       }
 
-      // Grill Arabia customer auto-replies in private chats only.
-      if (!isGroup(chat) && !msg.key.fromMe) {
-        const customerText = text.toLocaleLowerCase().replace(/[!?.,]/g, " ").replace(/\s+/g, " ").trim();
-        const saysHi = /^(hi|hello|hey|hai|ഹായ്|ഹലോ)(\s.*)?$/.test(customerText);
-        const asksMenu = /\b(menu|menus|food menu|send menu|share menu|menu please|price list|items and price)\b|മെനു|വിലവിവരം/.test(customerText);
-        const asksLocation = /\b(location|address|where are you|where is your shop|shop location|map|google map|directions)\b|ലൊക്കേഷൻ|അഡ്രസ്|എവിടെയാണ്/.test(customerText);
-        const asksDeliveryAvailability = /\b(delivery available|available for delivery|do you deliver|delivery possible|is it possible delivery|can you deliver|home delivery|deliver to me)\b|ഡെലിവറി ഉണ്ടോ|ഡെലിവറി ലഭിക്കുമോ/.test(customerText);
-        const asksDeliveryCharge = /\b(delivery charge|delivery charges|delivery fee|delivery cost|how much for delivery|delivery price|charge for delivery)\b|ഡെലിവറി ചാർജ്|ഡെലിവറി എത്ര/.test(customerText);
-        let customerReply = "";
-        if (saysHi) {
-          // Do not send automatic personal details, menu, gallery, or location for a greeting.
-          // Customers can still request the menu or location explicitly.
-        } else if (asksMenu) {
-          customerReply = process.env.GRILL_ARABIA_MENU || "🔥 *GRILL ARABIA — THE REAL TASTE* 🔥\n📍 Mannavanur, Kodaikkanal, Chinnamannur, Bodinayakanur\n\n🍗 *ALFAHAM MANDHI*\nFull — ₹1200\nHalf — ₹650\nQuarter — ₹300\n\n🍗 *ALFAHAM*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🔥 *GRILL MANDHI*\nFull — ₹1200\nHalf — ₹700\nQuarter — ₹300\n\n🍗 *GRILL*\nFull — ₹700\nHalf — ₹350\nQuarter — ₹200\n\n🍚 Chicken Biryani — ₹230\n🫓 Porota — ₹25\n🍛 Chicken Masala — ₹230\n\n📞 Delivery: 8489546495\n💬 WhatsApp: 7736094215\n\nThank you for choosing Grill Arabia 😊";
-        } else if (asksLocation) {
-          customerReply = process.env.GRILL_ARABIA_LOCATION || "📍 *Grill Arabia — Location*\nMannavanur, Poondi\nGoogle Maps: https://maps.app.goo.gl/2EYDbEmqZpo9FsPCA\n\nFor directions, call 8489546495 😊";
-        } else if (asksDeliveryAvailability) {
-          customerReply = "Yes, delivery is available 😊 Please share your location so we can check the delivery details.";
-        } else if (asksDeliveryCharge) {
-          customerReply = "Delivery charges are usually ₹60–₹70 for up to 5 km, depending on the exact location. 😊";
-        }
-        if (customerReply) {
-          await sock.sendMessage(chat, { text: customerReply }).catch(e =>
-            console.error("[GRILL ARABIA AUTO-REPLY] failed:", e?.message || e)
-          );
-          continue;
-        }
-      }
+      // Private-chat auto-replies are intentionally disabled by owner request.
 
       if (isGroup(chat)) {
         // Reply when the owner is mentioned, or when the group is all-mentioned/tagged.
@@ -902,7 +842,7 @@ const server = http.createServer((req, res) => {
 });
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
-startTelegram(() => sock, () => pairingReady, waitForPairingReady, () => (latestQr && Date.now() - latestQrAt < 10000 ? latestQr : null), waitForQr);
+startTelegram(() => sock, () => pairingReady, waitForPairingReady);
 startBot().catch(scheduleStartupRetry);
 
 // Log rejected background tasks without silently terminating the bot process.
