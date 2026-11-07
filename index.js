@@ -806,18 +806,18 @@ const server = http.createServer((req, res) => {
       reconnecting: restarting,
       reconnectAttempts,
       sessionStorage: SESSION_DIR
-    }) + "\\n");
+    }) + "\n");
     return;
   }
   // Keep the platform liveness probe independent from WhatsApp readiness.
   // A WhatsApp outage must not cause the host to repeatedly kill the Node process.
   if (req.url === "/health" || req.url === "/") {
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-    res.end("MS1 GROUP BOT process is running\\n");
+    res.end("MS1 GROUP BOT process is running\n");
     return;
   }
   res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-  res.end("Not found\\n");
+  res.end("Not found\n");
 });
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
