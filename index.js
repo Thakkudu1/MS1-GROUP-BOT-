@@ -55,6 +55,24 @@ let latestQr = null;
 let latestQrAt = 0;
 let qrWaiters = [];
 
+// Retry failed startup attempts with capped exponential backoff. This covers
+// transient DNS/network failures before the WhatsApp socket is fully created.
+function scheduleStartupRetry(error) {
+  starting = false;
+  restarting = false;
+  whatsappConnected = false;
+  console.error("[STARTUP RETRY] WhatsApp startup failed:", error?.stack || error?.message || error);
+  if (reconnectTimer) return;
+  const delay = Math.min(5000 * Math.pow(2, reconnectAttempts), 60000);
+  reconnectAttempts = Math.min(reconnectAttempts + 1, 5);
+  console.warn("[STARTUP RETRY] Retrying in " + delay + " ms; saved session will be preserved.");
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    startBot().catch(scheduleStartupRetry);
+  }, delay);
+  reconnectTimer.unref?.();
+}
+
 function waitForPairingReady(timeoutMs = 20000) {
   if (pairingReady) return Promise.resolve(true);
   return new Promise(resolve => {
@@ -288,11 +306,7 @@ async function startBot() {
         if (!reconnectTimer) {
           reconnectTimer = setTimeout(() => {
             reconnectTimer = null;
-            startBot().catch(retryErr => {
-              starting = false;
-              restarting = false;
-              console.error("[RECONNECT] Retry failed:", retryErr?.stack || retryErr?.message || retryErr);
-            });
+            startBot().catch(scheduleStartupRetry);
           }, 10000);
         }
       }
@@ -832,4 +846,16 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, "0.0.0.0", () => console.log(`Health server listening on 0.0.0.0:${PORT}`));
 
 startTelegram(() => sock, () => pairingReady, waitForPairingReady, () => (latestQr && Date.now() - latestQrAt < 10000 ? latestQr : null), waitForQr);
-startBot().catch(err => { console.error("Bot failed to start:", err); process.exit(1); });
+startBot().catch(scheduleStartupRetry);
+
+// Log rejected background tasks without silently terminating the bot process.
+process.on("unhandledRejection", reason => {
+  console.error("[UNHANDLED REJECTION] Background task failed:", reason?.stack || reason?.message || reason);
+});
+
+// A truly uncaught exception can leave the process in an unsafe state. Exit
+// non-zero so the hosting platform's configured restart policy can relaunch it.
+process.on("uncaughtException", error => {
+  console.error("[UNCAUGHT EXCEPTION] Exiting for host-level restart:", error?.stack || error);
+  process.exit(1);
+});
