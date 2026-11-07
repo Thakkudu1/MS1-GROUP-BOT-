@@ -218,7 +218,7 @@ async function startBot() {
     const disconnectError = lastDisconnect?.error;
     const statusCode = disconnectError?.output?.statusCode;
     const errorText = String(disconnectError?.message || disconnectError || "");
-    const badMac = /bad\\s*mac|mac\\s*error|decrypt.*session|invalid.*session/i.test(errorText);
+    const badMac = /bad\s*mac|mac\s*error|decrypt.*session|invalid.*session/i.test(errorText);
 
     if (connection || qr || lastDisconnect) {
       console.log("[WA CONNECTION] state=" + (connection || "connecting") +
@@ -233,7 +233,7 @@ async function startBot() {
       clearQr();
     }
     if (qr && !process.env.TELEGRAM_BOT_TOKEN) {
-      console.log("\\nScan this QR from WhatsApp Business > Linked devices:\\n");
+      console.log("\nScan this QR from WhatsApp Business > Linked devices:\n");
       qrcode.generate(qr, { small: true });
     }
     if (connection === "open") {
