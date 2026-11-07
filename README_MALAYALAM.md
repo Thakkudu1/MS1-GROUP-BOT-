@@ -1,50 +1,58 @@
 # MS1 GROUP BOT — മലയാളം
 
-ഈ repository-ൽ Telegram വഴി നിയന്ത്രിച്ച് WhatsApp pairing code നൽകുന്ന Node.js bot starter ഉണ്ട്.
+**Login:** WhatsApp Pairing Code മാത്രം. QR code generation, display, Telegram QR command എന്നിവ ഒഴിവാക്കിയിരിക്കുന്നു.
 
-## കമാൻഡുകൾ
-- Telegram: `/start`, `/id`, `/pair`
-- WhatsApp: `.menu`, `.ping`, `.alive`, `.owner`, `.topchat`, `.mystats`, `.tagall`, `.warn @member`, `.warnings`
-- `.topchat`: ഗ്രൂപ്പിൽ ഏറ്റവും കൂടുതൽ മെസ്സേജ് അയച്ച Top 10 അംഗങ്ങളെ കാണിക്കും.
-- `.mystats`: നിങ്ങൾ അയച്ച മെസ്സേജുകളുടെ എണ്ണം കാണിക്കും.
-- മെസ്സേജ് കണക്ക് ബോട്ട് പ്രവർത്തിക്കുന്ന സമയത്തുമുതൽ ശേഖരിക്കും; പഴയ മെസ്സേജുകൾ കണക്കിൽ വരില്ല.
+## WhatsApp ഗ്രൂപ്പ് കമാൻഡുകൾ
 
-## പ്രധാന സുരക്ഷാ മുന്നറിയിപ്പ്
-Baileys ഒരു അനൗദ്യോഗിക WhatsApp Web ലൈബ്രറിയാണ്. WhatsApp നിയന്ത്രണങ്ങൾ/അക്കൗണ്ട് നിയന്ത്രണം ഉണ്ടാകാം. കഴിയുമെങ്കിൽ പ്രത്യേകം നമ്പർ ഉപയോഗിക്കുക. Telegram bot token, WhatsApp session files എന്നിവ രഹസ്യമാണ്; ഇവ GitHub-ൽ ഇടരുത്, മറ്റൊരാൾക്കും അയക്കരുത്.
+- `.ping`, `.alive`, `.help`
+- `.topchat`, `.mystats`
+- `.tagall [message]` — ഗ്രൂപ്പ് അഡ്മിൻ / ബോട്ട് ഉടമ
+- `.kick @user`, `.promote @user`, `.demote @user` — ഗ്രൂപ്പ് അഡ്മിൻ / ബോട്ട് ഉടമ
+- `.warn @user`, `.warnings`
+- `.antilink on|off`
+- `.antidelete on|off` — ബോട്ട് പ്രവർത്തിക്കുന്ന സമയത്ത് cache ചെയ്ത ടെക്സ്റ്റ് മാത്രം തിരിച്ചറിയാം
+- `.antispam on|off`
+- `.securityalerts on|off`
+- `.welcome on|off`
+- `.rules [text]`
+- `.statusseen on|off`, `.statusreact on|off` — ബോട്ട് ഉടമയ്ക്ക് മാത്രം
 
-## 1. Telegram bot സൃഷ്ടിക്കുക
-1. Telegram-ൽ ഔദ്യോഗിക `@BotFather` തുറക്കുക.
-2. `/newbot` അയച്ച് bot name ആയി `MS1 GROUP BOT` നൽകുക.
-3. username ചോദിക്കുമ്പോൾ ലഭ്യമായ ഒരു username നൽകുക (അവസാനം `bot` വരണം).
-4. BotFather നൽകുന്ന token സ്വകാര്യമായി സൂക്ഷിക്കുക. GitHub-ൽ പോസ്റ്റ് ചെയ്യരുത്.
+ഗ്രൂപ്പ് സെറ്റിംഗുകളും warnings-ഉം നിലവിലെ കോഡിൽ process memory-ലാണ്; restart ചെയ്താൽ reset ആകാം. Message count JSON ഫയലിൽ സൂക്ഷിക്കുന്നു. എല്ലാ ഫീച്ചറുകളും WhatsApp/ Baileys permissions-നും group admin privileges-നും വിധേയമാണ്.
 
-## 2. ഹോസ്റ്റിൽ Environment Variables ചേർക്കുക
-ഈ variables host-ന്റെ Environment/Secrets വിഭാഗത്തിൽ ചേർക്കുക:
-- `TELEGRAM_BOT_TOKEN` = BotFather token
-- `TELEGRAM_OWNER_ID` = നിങ്ങളുടെ numeric Telegram ID
-- `OWNER_NUMBERS` = നിങ്ങളുടെ WhatsApp നമ്പർ country code സഹിതം, digits മാത്രം (ഉദാ. `919876543210`)
-- `PREFIX` = `.`
-- `WARN_LIMIT` = `3`
+## Telegram വഴി Pairing Code മാത്രം
 
-Telegram ID അറിയാൻ ആദ്യമായി `TELEGRAM_OWNER_ID` താൽക്കാലികമായി ഒഴിഞ്ഞുവെച്ച് bot run ചെയ്തശേഷം Telegram bot-ലേക്ക് `/id` അയയ്ക്കാം. Bot മറുപടിയിൽ ID കാണിക്കും. ആ ID host-ൽ `TELEGRAM_OWNER_ID` ആയി ചേർത്ത് service restart ചെയ്യുക. Token ഇല്ലാതെ Telegram bot പ്രവർത്തിക്കില്ല.
+1. Telegram-ൽ നിങ്ങളുടെ bot-ന്റെ private chat തുറക്കുക.
+2. `/start` അയയ്ക്കുക.
+3. `/pair` അയയ്ക്കുക.
+4. WhatsApp നമ്പർ country code സഹിതം digits മാത്രം അയയ്ക്കുക (ഉദാ. `919876543210`).
+5. Telegram-ൽ ലഭിക്കുന്ന 8-character pairing code ഉടൻ ഉപയോഗിക്കുക.
+6. WhatsApp → **Linked devices** → **Link a device** → **Link with phone number instead** → code നൽകുക.
 
-## 3. DormHost-ൽ Deploy ചെയ്യുക
-1. DormHost dashboard-ൽ `New app` അമർത്തുക.
-2. Name: `ms1-group-bot`; Plan: WhatsApp/Telegram bot തുടർച്ചയായി പ്രവർത്തിക്കാൻ `Awake` ആണ് അനുയോജ്യം; Region: `Mumbai, India`.
-3. GitHub repository `https://github.com/Thakkudu1/MS1-GROUP-BOT-` සහ branch `main` തിരഞ്ഞെടുക്കുക.
-4. `Subdirectory` ശൂന്യമായി വിടുക. Repository root-ലെ `Dockerfile` ഉപയോഗിച്ചാണ് build.
-5. `Create and deploy` അമർത്തിയശേഷം app-ന്റെ `Environment` വിഭാഗത്തിൽ ആവശ്യമായ variables ചേർക്കുക.
-6. App-ന് `PORT` ലഭിക്കും; `index.js` അതിൽ `0.0.0.0`-ൽ health endpoint തുറക്കും. WhatsApp session `/data/session`-ൽ സൂക്ഷിക്കും, അത് DormHost persistent storage ആണ്.
-7. `Live logs`-ൽ build വിജയിച്ചതും `Health server listening` / `Telegram control bot started` സന്ദേശങ്ങളും ഉണ്ടെന്ന് പരിശോധിക്കുക.
+**QR login ലഭ്യമല്ല.** QR code സൃഷ്ടിക്കുകയോ അയയ്ക്കുകയോ ചെയ്യുന്ന command ഇല്ല. Pairing code, Telegram token, session files എന്നിവ രഹസ്യമായി സൂക്ഷിക്കുക; ആരുമായും പങ്കിടരുത്.
 
-## 4. WhatsApp pairing code നേടുക
-1. Telegram bot-ൽ `/start` അയയ്ക്കുക.
-2. `/pair` അയയ്ക്കുക.
-3. WhatsApp നമ്പർ country code സഹിതം digits മാത്രം അയയ്ക്കുക (ഉദാ. `919876543210`).
-4. Telegram-ൽ ലഭിക്കുന്ന pairing code സ്വകാര്യമായി സൂക്ഷിക്കുക.
-5. **WhatsApp Business** തുറക്കുക → മുകളിൽ വലത് വശത്തെ **⋮** → **Linked devices** → **Link a device** → Telegram-ൽ ലഭിച്ച QR ഉടൻ സ്കാൻ ചെയ്യുക. QR പ്രവർത്തിക്കാത്ത പക്ഷം Telegram-ൽ `/qr` വീണ്ടും അയച്ച് പുതിയ QR സ്കാൻ ചെയ്യുക. Pairing code ഉപയോഗിക്കുമ്പോൾ **Link with phone number instead** തിരഞ്ഞെടുക്കുക.
+## ആവശ്യമായ Environment Variables
 
-Pairing code/token/session മറ്റാരുമായും പങ്കിടരുത്. ChatGPT-ക്ക് നിങ്ങളുടെ WhatsApp-ൽ നേരിട്ട് pairing പൂർത്തിയാക്കാൻ കഴിയില്ല.
+- `TELEGRAM_BOT_TOKEN` — BotFather token
+- `TELEGRAM_OWNER_ID` — നിങ്ങളുടെ Telegram numeric ID
+- `OWNER_NUMBERS` — ഉടമയുടെ WhatsApp നമ്പർ country code സഹിതം, digits മാത്രം
+- `PREFIX` — default `.`
+- `WARN_LIMIT` — default `3`
+- `LOG_LEVEL` — default `silent`
 
-## നിലവിലെ പരിധികൾ
-ഇത് ഒരു starter ആണ്; എല്ലാ advanced group moderation ഫീച്ചറുകളും ഇപ്പോൾ ഇല്ല. Warning counter നിലവിൽ memory-ൽ മാത്രമാണ്. സൗജന്യ host ഉറക്കം/റീസ്റ്റാർട്ട്/ഡാറ്റാ പരിധികൾ ഏർപ്പെടുത്താം; 24/7 പ്രവർത്തനം ഉറപ്പല്ല. WhatsApp-ന്റെ ഔദ്യോഗികമായി പിന്തുണയ്ക്കുന്ന മാർഗങ്ങൾ ഉപയോഗിക്കുന്നത് കൂടുതൽ സുരക്ഷിതമാണ്.
+Telegram ID അറിയാൻ ആദ്യം `/id` അയയ്ക്കുക. ലഭിച്ച ID hosting secrets-ൽ `TELEGRAM_OWNER_ID` ആയി ചേർക്കുക.
+
+## Hosting
+
+- Node.js 20+
+- Start command: `npm start`
+- Persistent storage നിർബന്ധം: `/data/session` (WhatsApp login keys), `/data/message-counts.json` (message stats)
+- Health endpoint: `/health`
+- Status endpoint: `/status`
+
+Host-ൽ persistent disk mount ചെയ്തില്ലെങ്കിൽ restart/deploy സമയത്ത് WhatsApp session നഷ്ടപ്പെടാം. Free host sleep ചെയ്യാം; 24/7 uptime ഉറപ്പില്ല.
+
+## സുരക്ഷാ കുറിപ്പുകൾ
+
+Baileys ഔദ്യോഗിക WhatsApp Business API അല്ല; WhatsApp Web automation ആണ്. WhatsApp account restrictions ഉണ്ടാകാനുള്ള സാധ്യതയുണ്ട്; anti-ban guarantee ഇല്ല. Bot-നെ group admin ആക്കിയാൽ മാത്രമേ delete/remove/promote/demote പോലുള്ള പ്രവർത്തനങ്ങൾ സാധിക്കൂ. Fake-number detection വിശ്വസനീയമായി ഉറപ്പാക്കാൻ കഴിയില്ല; സംശയകരമായ അക്കൗണ്ടുകൾ admin review ചെയ്യണം.
+
+Private-chat Grill Arabia auto-reply/menu/gallery feature ഈ പതിപ്പിൽ ഉദ്ദേശ്യപൂർവ്വം ഒഴിവാക്കിയിരിക്കുന്നു.
