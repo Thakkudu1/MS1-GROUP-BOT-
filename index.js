@@ -243,10 +243,25 @@ async function startBot() {
           fs.rmSync(SESSION_DIR, { recursive: true, force: true });
           fs.mkdirSync(SESSION_DIR, { recursive: true });
         }
+        // Release the reconnect guard before opening the new socket.
+        // If this new socket also closes before reaching "open", its close
+        // event must be allowed to schedule another reconnect.
+        restarting = false;
+        console.log("[RECONNECT] Starting a fresh WhatsApp connection attempt.");
         await startBot();
       } catch (err) {
         restarting = false;
-        console.error("WhatsApp restart failed:", err?.message || err);
+        console.error("WhatsApp restart failed:", err?.stack || err?.message || err);
+        // Do not leave the bot permanently stuck after a failed start.
+        if (!reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            startBot().catch(retryErr => {
+              restarting = false;
+              console.error("WhatsApp retry start failed:", retryErr?.stack || retryErr?.message || retryErr);
+            });
+          }, 10000);
+        }
       }
     }, resetSession ? 2500 : 5000);
   });
