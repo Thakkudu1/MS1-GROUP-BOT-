@@ -1,117 +1,102 @@
 const TelegramBot = require('node-telegram-bot-api');
-const QRCode = require('qrcode');
 
-function startTelegram(getSocket, isPairingReady, waitForPairingReady, getCurrentQr, waitForQr) {
+function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
   const token = process.env.TELEGRAM_BOT_TOKEN || '';
   const ownerId = String(process.env.TELEGRAM_OWNER_ID || '').trim();
-  if (!token) {
-    console.log('Telegram pairing disabled: set TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID.');
+  if (!token || !ownerId) {
+    console.log('Telegram pairing disabled: configure TELEGRAM_BOT_TOKEN and TELEGRAM_OWNER_ID.');
     return;
   }
-  const bot = new TelegramBot(token);
+
+  const bot = new TelegramBot(token, { polling: false });
   let busy = false;
-  const authorized = (msg) => ownerId && String(msg.from && msg.from.id || '') === ownerId;
+  let awaitingNumberFor = null;
+  const authorized = (msg) => String(msg.from?.id || '') === ownerId;
 
   bot.on('message', async (msg) => {
+    if (msg.chat?.type !== 'private') return;
     const text = String(msg.text || '').trim();
-    const match = text.match(/^\/(start|id|qr|pair)(?:@([A-Za-z0-9_]+))?(?:\s|$)/i);
-    if (match) {
-      const command = match[1].toLowerCase();
-      console.log('Telegram command received:', '/' + command, 'from user', String(msg.from && msg.from.id || 'unknown'));
-      try {
-        if (command === 'start') {
-          const reply = authorized(msg)
-            ? '👑 MS1 GROUP BOT\n\nSend /qr to receive a fresh QR for WhatsApp Business, or /pair to use a pairing code.'
-            : 'MS1 GROUP BOT\nYour Telegram ID: ' + String(msg.from && msg.from.id || '') + '\nAsk the owner to set TELEGRAM_OWNER_ID to this ID.';
-          await bot.sendMessage(msg.chat.id, reply);
-          console.log('Telegram /start reply sent.');
-          return;
-        }
-        if (command === 'id') {
-          await bot.sendMessage(msg.chat.id, 'Telegram ID: ' + String(msg.from && msg.from.id || ''));
-          return;
-        }
-        if (!authorized(msg)) {
-          await bot.sendMessage(msg.chat.id, 'Not authorized. Your Telegram ID is ' + String(msg.from && msg.from.id || '') + '. Ask the owner to configure TELEGRAM_OWNER_ID.');
-          return;
-        }
-        if (command === 'qr') {
-          let qr = getCurrentQr();
-          if (!qr) qr = await waitForQr(30000);
-          if (!qr) {
-            await bot.sendMessage(msg.chat.id, 'WhatsApp QR is not ready yet. Wait for the bot to reconnect, then send /qr again.');
-            return;
-          }
-          const image = await QRCode.toBuffer(qr, {
-            type: 'png',
-            width: 1200,
-            margin: 4,
-            errorCorrectionLevel: 'H'
-          });
-          await bot.sendDocument(msg.chat.id, image, {
-            caption: 'MS1 GROUP BOT — FRESH QR FOR WHATSAPP BUSINESS (uncompressed PNG)\nOpen this PNG and scan it immediately from WhatsApp Business → ⋮ → Linked devices → Link a device. Keep WhatsApp Business and the bot online. This QR expires quickly; if it fails, send /qr again for a NEW QR. Do not share this QR.'
-          }, {
-            filename: 'MS1-WhatsApp-QR.png',
-            contentType: 'image/png'
-          });
-          console.log('Fresh uncompressed WhatsApp QR document sent to Telegram user', String(msg.from && msg.from.id || 'unknown'));
-          return;
-        }
-        if (command === 'pair') {
-          await bot.sendMessage(msg.chat.id, 'Send your WhatsApp phone number with country code (digits only, e.g. 919876543210).');
-          return;
-        }
-      } catch (e) {
-        console.error('Telegram command reply failed for /' + command + ':', e.message);
-        try { await bot.sendMessage(msg.chat.id, 'MS1 bot error: ' + e.message); } catch (sendError) {
-          console.error('Telegram error notice could not be sent:', sendError.message);
-        }
-      }
-      return;
-    }
+    const command = text.match(/^\/(start|id|pair)(?:@([A-Za-z0-9_]+))?$/i)?.[1]?.toLowerCase();
 
-    if (!text || text.startsWith('/') || !authorized(msg)) return;
-    const number = text.replace(/\D/g, '');
-    if (!/^\d{10,15}$/.test(number)) return;
-    if (busy) {
-      await bot.sendMessage(msg.chat.id, 'Pairing is already in progress. Please wait.');
-      return;
-    }
-    let sock = getSocket();
-    if (!sock) {
-      await bot.sendMessage(msg.chat.id, 'WhatsApp is starting. Wait a few seconds and send /pair again.');
-      return;
-    }
-    if (sock.authState?.creds?.registered) {
-      await bot.sendMessage(msg.chat.id, 'WhatsApp already has a saved linked session. Wait for it to reconnect; do not request another pairing code yet.');
-      return;
-    }
-    busy = true;
     try {
-      const ready = isPairingReady() || await waitForPairingReady(20000);
-      sock = getSocket();
-      if (!ready || !sock || sock.authState?.creds?.registered) {
-        await bot.sendMessage(msg.chat.id, 'WhatsApp is not ready for a pairing code yet. Wait for the bot to reconnect, then send /pair again.');
+      if (command === 'id') {
+        await bot.sendMessage(msg.chat.id, 'Telegram ID: ' + String(msg.from?.id || ''));
         return;
       }
-      const rawCode = String(await sock.requestPairingCode(number));
-      const cleanCode = rawCode.replace(/[^A-Za-z0-9]/g, '');
-      const pretty = cleanCode.length === 8 ? cleanCode.slice(0, 4) + '-' + cleanCode.slice(4) : rawCode;
-      await bot.sendMessage(msg.chat.id, '🔐 MS1 GROUP BOT Pairing Code\n\n' + pretty + '\n\nWhatsApp → Linked devices → Link a device → Link with phone number instead. Enter this code promptly. Do not share it with anyone.');
-    } catch (e) {
-      console.error('Pairing code error:', e.message);
-      await bot.sendMessage(msg.chat.id, 'Could not get a pairing code. Confirm the WhatsApp number including country code, then wait for WhatsApp to finish reconnecting before trying again.');
-    } finally {
-      busy = false;
+      if (command === 'start') {
+        await bot.sendMessage(msg.chat.id, authorized(msg)
+          ? '👑 MS1 GROUP BOT\n\nQR login is disabled. Send /pair to link WhatsApp using a phone-number pairing code only.'
+          : 'MS1 GROUP BOT\nYour Telegram ID: ' + String(msg.from?.id || '') + '\nAsk the owner to configure this ID privately.');
+        return;
+      }
+      if (command === 'pair') {
+        if (!authorized(msg)) {
+          await bot.sendMessage(msg.chat.id, 'Not authorized. Your Telegram ID: ' + String(msg.from?.id || ''));
+          return;
+        }
+        awaitingNumberFor = String(msg.from.id);
+        await bot.sendMessage(msg.chat.id, 'Send your WhatsApp number with country code, digits only (example: 919876543210). This private chat is used only to request the pairing code.');
+        return;
+      }
+      if (!authorized(msg) || !awaitingNumberFor || awaitingNumberFor !== String(msg.from?.id)) return;
+
+      const number = text.replace(/\D/g, '');
+      if (!/^\d{10,15}$/.test(number)) {
+        await bot.sendMessage(msg.chat.id, 'Number format is invalid. Send 10–15 digits including country code, or send /pair to start again.');
+        return;
+      }
+      if (busy) {
+        await bot.sendMessage(msg.chat.id, 'Pairing request is already running. Please wait.');
+        return;
+      }
+
+      let sock = getSocket();
+      if (!sock) {
+        await bot.sendMessage(msg.chat.id, 'WhatsApp is starting. Wait a few seconds, then send /pair again.');
+        return;
+      }
+      if (sock.authState?.creds?.registered) {
+        awaitingNumberFor = null;
+        await bot.sendMessage(msg.chat.id, 'A WhatsApp session is already linked. The bot will reconnect using the saved session. Do not request a new code unless the session is intentionally reset.');
+        return;
+      }
+
+      busy = true;
+      awaitingNumberFor = null;
+      try {
+        const ready = isPairingReady() || await waitForPairingReady(25000);
+        sock = getSocket();
+        if (!ready || !sock || sock.authState?.creds?.registered) {
+          await bot.sendMessage(msg.chat.id, 'WhatsApp is not ready to issue a pairing code yet. Wait for the service to reconnect, then send /pair again.');
+          return;
+        }
+        const rawCode = String(await sock.requestPairingCode(number));
+        const cleanCode = rawCode.replace(/[^A-Za-z0-9]/g, '');
+        const formatted = cleanCode.length === 8 ? cleanCode.slice(0, 4) + '-' + cleanCode.slice(4) : rawCode;
+        await bot.sendMessage(msg.chat.id,
+          '🔐 MS1 GROUP BOT — Pairing Code\n\n' + formatted +
+          '\n\nWhatsApp → Linked devices → Link a device → Link with phone number instead. Enter this code promptly. Never forward or share it.');
+      } catch (error) {
+        console.error('[PAIRING] Pairing-code request failed:', error?.message || error);
+        await bot.sendMessage(msg.chat.id, 'Could not generate the pairing code. Check the WhatsApp number and try again after the bot is fully started.');
+      } finally {
+        busy = false;
+      }
+      return;
+    } catch (error) {
+      console.error('[TELEGRAM] Message handling failed:', error?.message || error);
+      try { await bot.sendMessage(msg.chat.id, 'MS1 bot could not complete that request. Please try again.'); } catch {}
     }
   });
 
-  bot.on('polling_error', (e) => console.error('Telegram polling error:', e.message));
-  bot.on('error', (e) => console.error('Telegram bot error:', e.message));
-  bot.getMe().then((me) => console.log('Telegram bot identity verified:', '@' + (me.username || 'unknown')))
-    .catch((e) => console.error('Telegram getMe failed:', e.message));
-  bot.startPolling().then(() => console.log('Telegram polling started successfully.'))
-    .catch((e) => console.error('Telegram polling could not start:', e.message));
+  bot.on('polling_error', error => console.error('[TELEGRAM] Polling error:', error?.message || error));
+  bot.on('error', error => console.error('[TELEGRAM] Bot error:', error?.message || error));
+  bot.getMe()
+    .then(me => console.log('[TELEGRAM] Owner pairing bot verified:', '@' + (me.username || 'unknown')))
+    .catch(error => console.error('[TELEGRAM] Bot identity check failed:', error?.message || error));
+  bot.startPolling()
+    .then(() => console.log('[TELEGRAM] Pairing-code control bot started. QR commands are disabled.'))
+    .catch(error => console.error('[TELEGRAM] Polling could not start:', error?.message || error));
 }
 
 module.exports = { startTelegram };
