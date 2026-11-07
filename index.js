@@ -292,7 +292,8 @@ async function startBot() {
     }, delay);
   });
 
-  sock.ev.on("group-participants.update", async (event) => {
+  currentSocket.ev.on("group-participants.update", async (event) => {
+    if (sock !== currentSocket) return;
     if (!groupSettings(event.id).welcome) return;
     for (const participant of event.participants || []) {
       if (event.action === "add") {
@@ -348,7 +349,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 
   // Cache text messages so the bot can repost them if they are deleted for everyone.
   // This is in-memory only and does not recover messages sent before the bot was running.
-  sock.ev.on("messages.update", async (updates) => {
+  currentSocket.ev.on("messages.update", async (updates) => {
+    if (sock !== currentSocket) return;
     for (const item of updates || []) {
       const protocolMessage = item.update?.message?.protocolMessage;
       const isRevoke = protocolMessage &&
@@ -374,7 +376,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
     }
   });
 
-  sock.ev.on("messages.upsert", async ({ messages, type }) => {
+  currentSocket.ev.on("messages.upsert", async ({ messages, type }) => {
+    if (sock !== currentSocket) return;
     console.log("[INCOMING EVENT]", JSON.stringify({ type, count: (messages || []).length, connected: whatsappConnected }));
     if (type !== "notify") return;
     for (const msg of messages) {
