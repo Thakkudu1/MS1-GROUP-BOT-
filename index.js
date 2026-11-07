@@ -234,8 +234,23 @@ async function startBot() {
   });
   sock = currentSocket;
 
+  // Serialize credential writes. Rapid creds.update events can otherwise
+  // trigger overlapping writes to the same multi-file auth state.
+  let credsSaveQueue = Promise.resolve();
+  let lastCredsSavedAt = null;
+  let lastCredsSaveError = null;
   currentSocket.ev.on("creds.update", () => {
-    saveCreds().catch(e => console.error("[SESSION SAVE] Credentials could not be saved:", e?.stack || e?.message || e));
+    credsSaveQueue = credsSaveQueue
+      .then(() => saveCreds())
+      .then(() => {
+        lastCredsSavedAt = new Date().toISOString();
+        lastCredsSaveError = null;
+        console.log("[SESSION SAVE] WhatsApp credentials saved.");
+      })
+      .catch(e => {
+        lastCredsSaveError = String(e?.message || e);
+        console.error("[SESSION SAVE] Credentials could not be saved:", e?.stack || e?.message || e);
+      });
   });
 
   currentSocket.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
@@ -846,6 +861,11 @@ const server = http.createServer((req, res) => {
       reconnectAttempts,
       lastIncomingMessageAt,
       messageProcessingErrors,
+      sessionSave: {
+        lastSavedAt: lastCredsSavedAt,
+        lastError: lastCredsSaveError
+      },
+      uptimeSeconds: Math.floor(process.uptime()),
       sessionStorage: SESSION_DIR
     }) + "\n");
     return;
