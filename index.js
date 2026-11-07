@@ -203,6 +203,69 @@ async function sendMs1LogoNotice(chat, caption, quoted) {
     console.error("[COMMAND PERMISSION] Notice failed:", e?.message || e)
   );
 }
+
+// OpenAI-powered Malayalam replies are only used for group mentions. Private
+// customer auto-replies and existing bot commands remain unchanged.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const AI_REPLY_COOLDOWN_MS = Math.max(5000, Number(process.env.AI_REPLY_COOLDOWN_MS || 15000));
+const LAST_AI_REPLY_AT = new Map();
+
+async function generateMalayalamAIReply(userText, chat, sender) {
+  if (!OPENAI_API_KEY) {
+    console.warn("[OPENAI] OPENAI_API_KEY is not configured; using the existing mention reply.");
+    return null;
+  }
+  const cooldownKey = chat + ":" + sender;
+  const now = Date.now();
+  const lastReplyAt = LAST_AI_REPLY_AT.get(cooldownKey) || 0;
+  if (now - lastReplyAt < AI_REPLY_COOLDOWN_MS) {
+    console.log("[OPENAI] Mention reply skipped by per-user cooldown.");
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + OPENAI_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: "നിങ്ങൾ MS1 GROUP BOT ആണ്. മലയാളത്തിൽ സ്വാഭാവികവും സൗഹൃദപരവുമായി ചുരുക്കത്തിൽ മറുപടി നൽകുക. ഉപയോക്താവിന്റെ ചോദ്യം നേരിട്ട് മറുപടി നൽകുക. അറിയാത്ത കാര്യങ്ങൾ കെട്ടിച്ചമയ്ക്കരുത്. ഗ്രൂപ്പ് അഡ്മിൻ നടപടികൾ, അംഗങ്ങളെ നീക്കം ചെയ്യൽ, അക്കൗണ്ട്/സെർവർ നിയന്ത്രണം എന്നിവ ചെയ്തുവെന്ന് അവകാശപ്പെടരുത്. രഹസ്യ കീകൾ, പാസ്‌വേഡുകൾ, സ്വകാര്യ വിവരങ്ങൾ ചോദിക്കുകയോ വെളിപ്പെടുത്തുകയോ ചെയ്യരുത്. സാധാരണയായി 1–4 വാക്യങ്ങളിൽ മറുപടി നൽകുക."
+          },
+          { role: "user", content: String(userText || "").slice(0, 2000) }
+        ],
+        temperature: 0.7,
+        max_tokens: 220
+      }),
+      signal: AbortSignal.timeout(20000)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      console.error("[OPENAI] API request failed:", response.status, errorBody.slice(0, 500));
+      return null;
+    }
+    const data = await response.json();
+    const answer = data.choices?.[0]?.message?.content?.trim();
+    if (!answer) {
+      console.warn("[OPENAI] API returned an empty reply.");
+      return null;
+    }
+    LAST_AI_REPLY_AT.set(cooldownKey, now);
+    console.log("[OPENAI] Malayalam group mention reply generated.");
+    return answer.slice(0, 1500);
+  } catch (error) {
+    console.error("[OPENAI] Reply generation failed:", error?.message || error);
+    return null;
+  }
+}
+
 async function startBot() {
   // Never create two sockets at once: concurrent sockets sharing one auth folder
   // can overwrite Signal keys and trigger Bad MAC/decryption failures.
@@ -308,11 +371,13 @@ async function startBot() {
       reconnectTimer = null;
       try {
         if (loggedOut) {
-          // A 401/logged-out session is invalid. The manual backup remains the
-          // recovery point; all other disconnects retain the existing keys.
-          fs.rmSync(SESSION_DIR, { recursive: true, force: true });
-          fs.mkdirSync(SESSION_DIR, { recursive: true });
-          console.warn("[SESSION] Cleared auth files only after confirmed logged-out/401 status.");
+          // Never delete WhatsApp credentials automatically. A 401/logged-out
+          // response needs owner review and a deliberate fresh QR login. Keeping
+          // the files allows manual recovery/backup and prevents surprise loss.
+          console.error("[SESSION] WhatsApp reports logged out. Existing auth files are preserved; manual review and QR relink may be required.");
+          restarting = false;
+          starting = false;
+          return;
         }
         restarting = false;
         await startBot();
@@ -607,8 +672,10 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           );
           const previousReply = LAST_OWNER_REPLIES.get(chat);
           const choices = friendlyReplies.filter(replyText => replyText !== previousReply);
-          const replyText = choices[Math.floor(Math.random() * choices.length)] || friendlyReplies[0];
-          LAST_OWNER_REPLIES.set(chat, replyText);
+          const fallbackReply = choices[Math.floor(Math.random() * choices.length)] || friendlyReplies[0];
+          const aiReply = await generateMalayalamAIReply(text, chat, sender);
+          const replyText = aiReply || fallbackReply;
+          if (!aiReply) LAST_OWNER_REPLIES.set(chat, replyText);
           await sock.sendMessage(chat, { text: replyText }, { quoted: msg }).catch(e =>
             console.error("[OWNER MENTION REPLY] failed:", e?.message || e)
           );

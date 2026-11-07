@@ -1,0 +1,25 @@
+name: Validate MS1 GROUP BOT
+
+on:
+  push:
+    branches:
+      - feature/openai-malayalam-ai
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Check JavaScript syntax
+        run: npm test
