@@ -638,57 +638,57 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             continue;
           }
         }
-        if (settings.antilink && /(?:https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|telegram\.me\/|bit\.ly\/|tinyurl\.com\/|(?:[a-z0-9-]+\.)+(?:com|net|org|in|io|co|me|gg|ly|app|dev|info|biz|xyz|site|online|store|tech|edu|gov|ai|tv|cc|uk|us|de|ru|br|jp|cn|au|ca|eu|link|click|top|live|pro|cloud|social|website|space|fun|pw|tk|ml|ga|cf|gq)(?:\/|\b))/i.test(text)) {
+        const containsAnyLink = /(?:https?:\/\/|ftp:\/\/|www\d?\.[^\s]+|(?:chat\.whatsapp\.com|wa\.me|whatsapp\.com|t\.me|telegram\.me|telegram\.org|youtu\.be|youtube\.com|instagram\.com|facebook\.com|fb\.watch|bit\.ly|tinyurl\.com|tiktok\.com|x\.com|twitter\.com)\/?[^\s]*|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:[/:?#][^\s]*)?)/i.test(text);
+        if (settings.antilink && containsAnyLink) {
           const meta = await sock.groupMetadata(chat).catch(() => null);
-          const isAdminParticipant = (p, jid) =>
-            [p.id, p.phoneNumber, p.lid].filter(Boolean).some(id => jidNormalizedUser(id) === jidNormalizedUser(jid)) &&
-            (p.admin === "admin" || p.admin === "superadmin");
-          // Delete links from all members, including group admins. Only the configured bot owner is exempt.
-          if (!isOwner(sender)) {
-            const botJids = [sock.user?.id, sock.user?.lid].filter(Boolean);
-            const botAdmin = (meta?.participants || []).some(p =>
-              botJids.some(jid => isAdminParticipant(p, jid))
-            );
-            if (!botAdmin) {
-              console.log("[ANTILINK] Cannot delete: bot is not group admin; notifying group admins", chat);
-              const adminJids = (meta?.participants || [])
-                .filter(p => p.admin === "admin" || p.admin === "superadmin")
-                .map(p => p.id)
-                .filter(Boolean);
-              const adminMentions = [...new Set(adminJids)];
-              const adminTags = adminMentions.map(jid => "@" + senderNumber(jid)).join(" ");
-              const alertText = "🚨 *ANTI-LINK ALERT* 🚨\\nഒരു ലിങ്ക് കണ്ടെത്തി. ദയവായി പരിശോധിക്കുക.\\nഅയച്ചത്: @" + senderNumber(sender) + (adminTags ? "\\nഗ്രൂപ്പ് അഡ്മിൻമാർ: " + adminTags : "\\nഗ്രൂപ്പ് അഡ്മിൻമാരെ കണ്ടെത്താനായില്ല.");
-              await sock.sendMessage(chat, { text: alertText, mentions: [...new Set([sender, ...adminMentions])] }).catch(e => {
-                console.error("[ANTILINK] Admin alert failed:", e?.message || e);
-              });
-            } else {
-              if (settings.securityalerts) {
-                const adminJids = [...new Set((meta?.participants || [])
-                  .filter(p => p.admin === "admin" || p.admin === "superadmin")
-                  .map(p => p.id).filter(Boolean))];
-                const adminTags = adminJids.map(jid => "@" + senderNumber(jid)).join(" ");
-                await sock.sendMessage(chat, {
-                  text: "🚨 *LINK ALERT* 🚨\nഒരു ലിങ്ക് കണ്ടെത്തി; ബോട്ട് ലിങ്ക് നീക്കം ചെയ്യാൻ ശ്രമിക്കുന്നു.\nഅയച്ചത്: @" + senderNumber(sender) + (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : ""),
-                  mentions: [...new Set([sender, ...adminJids])]
-                }).catch(e => console.error("[LINK ALERT] failed:", e?.message || e));
-              }
-              const deleteKey = {
-                remoteJid: chat,
-                fromMe: Boolean(msg.key.fromMe),
-                id: msg.key.id,
-                participant: msg.key.participant || msg.key.participantAlt || sender
-              };
-              try {
-                await sock.sendMessage(chat, { delete: deleteKey });
-                console.log("[ANTILINK] Deleted link message", JSON.stringify({ chat, id: msg.key.id }));
-              } catch (e) {
-                console.error("[ANTILINK] Delete failed:", e?.message || e);
-                await sock.sendMessage(chat, { text: "⚠️ ലിങ്ക് ഡിലീറ്റ് ചെയ്യാനായില്ല. ബോട്ടിന്റെ Admin permission പരിശോധിക്കുക." }).catch(() => {});
-              }
-            }
-            await sock.sendMessage(chat, { text: "🔗 ഗ്രൂപ്പിൽ ലിങ്കുകൾ അനുവദനീയമല്ല." }).catch(() => {});
+          const botJids = [sock.user?.id, sock.user?.lid].filter(Boolean);
+          const ownerIsAdmin = (meta?.participants || []).some(p =>
+            botJids.some(jid =>
+              [p.id, p.phoneNumber, p.lid].filter(Boolean).some(id =>
+                jidNormalizedUser(id) === jidNormalizedUser(jid)
+              )
+            ) && (p.admin === "admin" || p.admin === "superadmin")
+          );
+          const adminJids = [...new Set((meta?.participants || [])
+            .filter(p => p.admin === "admin" || p.admin === "superadmin")
+            .flatMap(p => [p.id, p.phoneNumber, p.lid].filter(Boolean)))];
+          const adminTags = adminJids.map(jid => "@" + senderNumber(jid)).join(" ");
+
+          // The connected WhatsApp account must be a group admin to remove links.
+          // If it is not an admin, leave the message in place and alert the admins.
+          if (!ownerIsAdmin) {
+            console.log("[ANTILINK] Bot account is not a group admin; notifying admins", chat);
+            const alertText = "🚨 *MS1 ANTI-LINK WARNING* 🚨\nഒരു ലിങ്ക് കണ്ടെത്തി. ഈ ഗ്രൂപ്പിൽ ബോട്ട് അഡ്മിൻ അല്ലാത്തതിനാൽ മെസ്സേജ് ഡിലീറ്റ് ചെയ്യാൻ കഴിയില്ല.\nഅയച്ചത്: @" +
+              senderNumber(sender) + (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : "\nഗ്രൂപ്പ് അഡ്മിൻമാരെ കണ്ടെത്താനായില്ല.");
+            await sock.sendMessage(chat, {
+              text: alertText,
+              mentions: [...new Set([sender, ...adminJids])]
+            }).catch(e => console.error("[ANTILINK] Admin warning failed:", e?.message || e));
             continue;
           }
+
+          // Remove links from every member, including admins and the bot owner.
+          const deleteKey = {
+            remoteJid: chat,
+            fromMe: Boolean(msg.key.fromMe),
+            id: msg.key.id,
+            participant: msg.key.participant || msg.key.participantAlt || sender
+          };
+          try {
+            await sock.sendMessage(chat, { delete: deleteKey });
+            console.log("[ANTILINK] Deleted link message", JSON.stringify({ chat, id: msg.key.id }));
+            await sock.sendMessage(chat, {
+              text: "🔗 ലിങ്കുകൾ ഈ ഗ്രൂപ്പിൽ അനുവദനീയമല്ല. മെസ്സേജ് നീക്കം ചെയ്തു."
+            }).catch(e => console.error("[ANTILINK] Removal notice failed:", e?.message || e));
+          } catch (e) {
+            console.error("[ANTILINK] Delete failed:", e?.message || e);
+            await sock.sendMessage(chat, {
+              text: "⚠️ *ANTI-LINK:* ലിങ്ക് കണ്ടെത്തി, പക്ഷേ ഡിലീറ്റ് ചെയ്യാനായില്ല. ബോട്ടിന്റെ WhatsApp Admin permission പരിശോധിക്കുക.\nഅയച്ചത്: @" + senderNumber(sender) +
+                (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : ""),
+              mentions: [...new Set([sender, ...adminJids])]
+            }).catch(() => {});
+          }
+          continue;
         }
       }
 
