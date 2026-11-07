@@ -50,6 +50,8 @@ let starting = false;
 let reconnectAttempts = 0;
 let lastIncomingMessageAt = null;
 let messageProcessingErrors = 0;
+let lastCredsSavedAt = null;
+let lastCredsSaveError = null;
 let reconnectTimer = null;
 let pairingReady = false;
 let pairingReadyWaiters = [];
@@ -237,8 +239,6 @@ async function startBot() {
   // Serialize credential writes. Rapid creds.update events can otherwise
   // trigger overlapping writes to the same multi-file auth state.
   let credsSaveQueue = Promise.resolve();
-  let lastCredsSavedAt = null;
-  let lastCredsSaveError = null;
   currentSocket.ev.on("creds.update", () => {
     credsSaveQueue = credsSaveQueue
       .then(() => saveCreds())
