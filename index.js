@@ -674,20 +674,40 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             id: msg.key.id,
             participant: msg.key.participant || msg.key.participantAlt || sender
           };
+          let linkDeleted = false;
           try {
             await sock.sendMessage(chat, { delete: deleteKey });
+            linkDeleted = true;
             console.log("[ANTILINK] Deleted link message", JSON.stringify({ chat, id: msg.key.id }));
-            await sock.sendMessage(chat, {
-              text: "🔗 ലിങ്കുകൾ ഈ ഗ്രൂപ്പിൽ അനുവദനീയമല്ല. മെസ്സേജ് നീക്കം ചെയ്തു."
-            }).catch(e => console.error("[ANTILINK] Removal notice failed:", e?.message || e));
           } catch (e) {
             console.error("[ANTILINK] Delete failed:", e?.message || e);
-            await sock.sendMessage(chat, {
-              text: "⚠️ *ANTI-LINK:* ലിങ്ക് കണ്ടെത്തി, പക്ഷേ ഡിലീറ്റ് ചെയ്യാനായില്ല. ബോട്ടിന്റെ WhatsApp Admin permission പരിശോധിക്കുക.\nഅയച്ചത്: @" + senderNumber(sender) +
-                (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : ""),
-              mentions: [...new Set([sender, ...adminJids])]
-            }).catch(() => {});
           }
+
+          // Remove the link sender from the group after detecting the link.
+          // WhatsApp may reject removal of group owners/admins or if the sender JID is not actionable.
+          const senderIsBot = botJids.some(jid => jidNormalizedUser(jid) === jidNormalizedUser(sender));
+          let senderRemoved = false;
+          if (!senderIsBot) {
+            try {
+              await sock.groupParticipantsUpdate(chat, [sender], "remove");
+              senderRemoved = true;
+              console.log("[ANTILINK] Removed link sender from group", JSON.stringify({ chat, sender }));
+            } catch (e) {
+              console.error("[ANTILINK] Could not remove link sender:", e?.message || e);
+            }
+          }
+
+          const resultLines = [
+            linkDeleted ? "🔗 ലിങ്ക് മെസ്സേജ് ഡിലീറ്റ് ചെയ്തു." : "⚠️ ലിങ്ക് മെസ്സേജ് ഡിലീറ്റ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",
+            senderRemoved ? "🚫 ലിങ്ക് അയച്ചയാളെ ഗ്രൂപ്പിൽ നിന്ന് നീക്കം ചെയ്തു." :
+              (senderIsBot ? "ബോട്ട് സ്വന്തം മെസ്സേജ് അയച്ചതിനാൽ ബോട്ടിനെ നീക്കം ചെയ്തില്ല." :
+                "⚠️ അയച്ചയാളെ നീക്കം ചെയ്യാൻ കഴിഞ്ഞില്ല. അയാൾ ഗ്രൂപ്പ് അഡ്മിൻ/ഓണർ ആയിരിക്കാം; ബോട്ടിന്റെ അനുമതിയും പരിശോധിക്കുക."),
+            "അയച്ചത്: @" + senderNumber(sender)
+          ];
+          await sock.sendMessage(chat, {
+            text: "🛡️ *MS1 ANTI-LINK ACTION*\n" + resultLines.join("\n"),
+            mentions: [sender]
+          }).catch(e => console.error("[ANTILINK] Action notice failed:", e?.message || e));
           continue;
         }
       }
