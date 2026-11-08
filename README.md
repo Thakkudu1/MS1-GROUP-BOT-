@@ -4,26 +4,41 @@ Independent MS2 deployment on the `ms2-group-bot` branch. The original `main` br
 
 ## Runtime and hosting
 
-- Node.js 20 or newer; Baileys 6.7.24.
-- Install command: `npm install`
-- Start command: `npm start`
-- Health endpoint: `/health`; detailed status endpoint: `/status`.
-- Mount a persistent volume at `/data`. WhatsApp auth files default to `/data/session`; message counts default to `/data/message-counts.json`.
-- In BotNix Cloud, deploy this repository's `ms2-group-bot` branch as a Node.js service, set the start command to `npm start`, attach persistent storage at `/data`, and configure the variables in `.env.example` in the dashboard. The exact volume controls must be confirmed in the account.
+- Use Node.js 22 in BotNix's Docker Image selector (Node.js 20+ is required by the package).
+- The Pterodactyl Node.js egg clones the repository and runs `npm install` during its install step.
+- Main file: `index.js`; start command: `npm start`.
+- The server listens on `PORT`, then `SERVER_PORT`, then port 3000 as a fallback.
+- Health endpoints: `/` and `/health`; diagnostic endpoint: `/status`.
+- WhatsApp session defaults to `./session` (server files persist across normal restarts). If a persistent volume is available, set `SESSION_DIR` and `STATS_FILE` in the private `.env` file to locations on that volume.
+
+## BotNix setup
+
+1. In Startup, set Git Repo Address to `https://github.com/Thakkudu1/MS1-GROUP-BOT-` and Install Branch to `ms2-group-bot`.
+2. Keep User Uploaded Files OFF; keep Git Username, Git Access Token, Additional Node Packages, Uninstall Node Packages, and Additional Arguments blank for this public repository.
+3. Set Main File to `index.js` and choose Docker Image `Nodejs 22`.
+4. The visible Startup variables are for the generic Node.js egg; they do not include the bot's Telegram credentials. Do not put secrets in GitHub or the public `.env.example`.
+5. After the server files have been installed, create a private file named `.env` in the server File Manager. Copy the variable names from `.env.example` and fill in the real values there. Do not upload or commit a real `.env` file. If the File Manager hides dotfiles, use the panel's New File action with the exact filename `.env`.
+6. Start the server and inspect Console logs. Deployment is not confirmed until installation succeeds and the process remains online.
+
+## Private environment variables
+
+- `TELEGRAM_BOT_TOKEN`: token from BotFather for a dedicated Telegram bot.
+- `TELEGRAM_OWNER_ID`: the owner's numeric Telegram user ID.
+- `OWNER_NUMBERS`: WhatsApp owner number(s), country code included, digits only; separate multiple numbers with commas.
+- `PREFIX`: command prefix, default `.`.
+- `WARN_LIMIT`: warning threshold, default `3`.
+- `STATUS_AUTO_REACT` and `STATUS_AUTO_SEEN`: `true` or `false`.
+- `SESSION_DIR` and `STATS_FILE`: optional paths for session and message-count storage.
 
 ## Telegram pairing
 
-Create a dedicated Telegram bot with BotFather. Set `TELEGRAM_BOT_TOKEN` and the owner's numeric `TELEGRAM_OWNER_ID` in the hosting dashboard. In the bot's private Telegram chat, use `/start`, then `/pair`, and follow the prompts. The owner sends their WhatsApp number with country code; the bot returns an 8-character pairing code. On WhatsApp choose Linked devices → Link a device → Link with phone number instead. Never share the Telegram token or pairing code.
-
-## Environment variables
-
-See `.env.example`. Also set `OWNER_NUMBERS` to the owner's WhatsApp number including country code, digits only. Do not commit real secrets.
+Create a dedicated Telegram bot with BotFather. Add its token and the owner's numeric Telegram ID to the private `.env` file. In the bot's private Telegram chat, use `/start`, then `/pair`, and follow the prompts. Send the WhatsApp number with country code; the bot returns a pairing code. On WhatsApp, choose Linked devices → Link a device → Link with phone number. This branch disables QR login. Never share the Telegram token or pairing code.
 
 ## Included commands and behavior
 
 `.menu`, `.help`, `.ping`, `.alive`, `.owner`, `.topchat`, `.mystats`, `.tagall`, `.kick`, `.promote`, `.demote`, `.warn`, `.warnings`, `.antilink`, `.antidelete`, `.antispam`, `.securityalerts`, `.welcome`, `.rules`, `.statusreact`, and `.statusseen`.
 
-Also includes Telegram owner-only pairing, welcome/goodbye notices, persistent message counts, text anti-delete recovery for messages observed while online, link/spam moderation, status auto-seen/reactions, and reconnect/session-save handling. Admin actions require the bot to be a WhatsApp group admin and remain subject to WhatsApp restrictions. Some group settings and warning counts currently reset after restart.
+Also includes Telegram owner-only pairing, welcome/goodbye notices, message counts, text anti-delete recovery for messages observed while online, link/spam moderation, status auto-seen/reactions, and reconnect/session-save handling. Admin actions require the bot to be a WhatsApp group admin and remain subject to WhatsApp restrictions. Some group settings and warning counts currently reset after restart.
 
 ## Not implemented or not yet verified
 
