@@ -148,27 +148,27 @@ function getText(msg) {
 
 // The repository stores the JPEG as Base64 text. Decode it once and verify
 // the JPEG signature so an invalid text file is never sent as an image.
-const MS1_LOGO_PATH = require("path").join(__dirname, "assets", "ms1-logo.jpg.b64");
-let MS1_LOGO_BUFFER = null;
+const MS2_LOGO_PATH = require("path").join(__dirname, "assets", "ms1-logo.jpg.b64");
+let MS2_LOGO_BUFFER = null;
 try {
-  const logoBase64 = fs.readFileSync(MS1_LOGO_PATH, "utf8").replace(/\s/g, "");
+  const logoBase64 = fs.readFileSync(MS2_LOGO_PATH, "utf8").replace(/\s/g, "");
   const decodedLogo = Buffer.from(logoBase64, "base64");
   const isJpeg = decodedLogo.length > 4 &&
     decodedLogo[0] === 0xff && decodedLogo[1] === 0xd8 &&
     decodedLogo[decodedLogo.length - 2] === 0xff && decodedLogo[decodedLogo.length - 1] === 0xd9;
   if (!isJpeg) throw new Error("Logo asset is not a complete JPEG image");
-  MS1_LOGO_BUFFER = decodedLogo;
-  console.log("[MS1 LOGO] JPEG loaded and validated:", decodedLogo.length, "bytes");
+  MS2_LOGO_BUFFER = decodedLogo;
+  console.log("[MS2 LOGO] JPEG loaded and validated:", decodedLogo.length, "bytes");
 } catch (e) {
-  console.error("[MS1 LOGO] Logo unavailable; check assets/ms1-logo.jpg.b64:", e.message);
+  console.error("[MS2 LOGO] Logo unavailable; check assets/ms1-logo.jpg.b64:", e.message);
 }
 async function sendMs1LogoNotice(chat, caption, quoted) {
-  if (!MS1_LOGO_BUFFER) {
+  if (!MS2_LOGO_BUFFER) {
     await sock.sendMessage(chat, { text: caption }, quoted ? { quoted } : {}).catch(() => {});
     return;
   }
   await sock.sendMessage(chat, {
-    image: MS1_LOGO_BUFFER,
+    image: MS2_LOGO_BUFFER,
     mimetype: "image/jpeg",
     caption
   }, quoted ? { quoted } : {}).catch(e =>
@@ -195,7 +195,7 @@ async function startBot() {
     auth: state,
     logger: pino({ level: process.env.LOG_LEVEL || "silent" }),
     printQRInTerminal: false,
-    browser: ["MS1 GROUP BOT", "Chrome", "1.0.0"],
+    browser: ["MS2 GROUP BOT", "Chrome", "1.0.0"],
     // Keep the WhatsApp WebSocket alive and allow slower mobile/host networks
     // enough time to complete handshakes and queries.
     keepAliveIntervalMs: 20_000,
@@ -252,7 +252,7 @@ async function startBot() {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
       }
-      console.log("[WA CONNECTION] MS1 GROUP BOT connected successfully.");
+      console.log("[WA CONNECTION] MS2 GROUP BOT connected successfully.");
       return;
     }
     if (connection !== "close" || restarting) return;
@@ -312,7 +312,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 💬 *Your presence matters. Let's make great memories together!* 💯❤️
 
 ━━━━━━━━━━━━━━
-💖 *BEST WISHES FROM MS1 GROUP!* 💖
+💖 *BEST WISHES FROM MS2 GROUP!* 💖
 ━━━━━━━━━━━━━━`;
         let profilePicUrl = null;
         try { profilePicUrl = await sock.profilePictureUrl(participant, "image"); } catch {}
@@ -323,12 +323,12 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         } else {
           await sock.sendMessage(event.id, { text: welcomeText, mentions: [participant] }).catch(() => {});
         }
-        // Send the compact MS1 brand logo as a separate image directly below the welcome notice.
-        if (MS1_LOGO_BUFFER) {
+        // Send the compact MS2 brand logo as a separate image directly below the welcome notice.
+        if (MS2_LOGO_BUFFER) {
           await sock.sendMessage(event.id, {
-            image: MS1_LOGO_BUFFER,
+            image: MS2_LOGO_BUFFER,
             mimetype: "image/jpeg",
-            caption: "MS ONE • TECH CREW"
+            caption: "MS TWO • TECH CREW"
           }).catch(e => console.error("[WELCOME LOGO] Send failed:", e?.message || e));
         } else {
           console.error("[WELCOME LOGO] Skipped: logo file did not pass JPEG validation.");
@@ -431,7 +431,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (normalizedPing === PREFIX.toLowerCase() + "ping" || normalizedPing === "ping") {
         console.log("[COMMAND] ping received", JSON.stringify({ chat, fromMe: Boolean(msg.key.fromMe), sender, prefix: PREFIX }));
         try {
-          await sock.sendMessage(chat, { text: "Pong! 🟢 MS1 GROUP BOT is online." }, { quoted: msg });
+          await sock.sendMessage(chat, { text: "Pong! 🟢 MS2 GROUP BOT is online." }, { quoted: msg });
           console.log("[COMMAND] ping reply sent", chat);
         } catch (e) {
           console.error("[COMMAND] ping reply failed:", e?.stack || e?.message || e);
@@ -598,7 +598,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           // If it is not an admin, leave the message in place and alert the admins.
           if (!ownerIsAdmin) {
             console.log("[ANTILINK] Bot account is not a group admin; notifying admins", chat);
-            const alertText = "🚨 *MS1 ANTI-LINK WARNING* 🚨\nഒരു ലിങ്ക് കണ്ടെത്തി. ഈ ഗ്രൂപ്പിൽ ബോട്ട് അഡ്മിൻ അല്ലാത്തതിനാൽ മെസ്സേജ് ഡിലീറ്റ് ചെയ്യാൻ കഴിയില്ല.\nഅയച്ചത്: @" +
+            const alertText = "🚨 *MS2 ANTI-LINK WARNING* 🚨\nഒരു ലിങ്ക് കണ്ടെത്തി. ഈ ഗ്രൂപ്പിൽ ബോട്ട് അഡ്മിൻ അല്ലാത്തതിനാൽ മെസ്സേജ് ഡിലീറ്റ് ചെയ്യാൻ കഴിയില്ല.\nഅയച്ചത്: @" +
               senderNumber(sender) + (adminTags ? "\nഅഡ്മിൻമാർ: " + adminTags : "\nഗ്രൂപ്പ് അഡ്മിൻമാരെ കണ്ടെത്താനായില്ല.");
             await sock.sendMessage(chat, {
               text: alertText,
@@ -645,7 +645,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
             "അയച്ചത്: @" + senderNumber(sender)
           ];
           await sock.sendMessage(chat, {
-            text: "🛡️ *MS1 ANTI-LINK ACTION*\n" + resultLines.join("\n"),
+            text: "🛡️ *MS2 ANTI-LINK ACTION*\n" + resultLines.join("\n"),
             mentions: [sender]
           }).catch(e => console.error("[ANTILINK] Action notice failed:", e?.message || e));
           continue;
@@ -672,7 +672,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           sender, participant: msg.key.participant || null,
           participantAlt: msg.key.participantAlt || null, command
         }));
-        await sendMs1LogoNotice(chat, "🔒 ഈ കമാൻഡ് MS1 GROUP BOT ഉടമയ്ക്ക് മാത്രം ഉപയോഗിക്കാം.", msg);
+        await sendMs1LogoNotice(chat, "🔒 ഈ കമാൻഡ് MS2 GROUP BOT ഉടമയ്ക്ക് മാത്രം ഉപയോഗിക്കാം.", msg);
         continue;
       }
       if (command === "topchat" && isGroup(chat)) {
@@ -687,7 +687,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         await reply("📊 നിങ്ങളുടെ മെസ്സേജ് എണ്ണം: " + (Number(mine?.count) || 0));
       } else if (command === "menu" || command === "help") {
         await reply(
-`╭─「 MS1 GROUP BOT 」
+`╭─「 MS2 GROUP BOT 」
 │ Prefix: ${PREFIX}
 │ ${PREFIX}menu / ${PREFIX}help
 │ ${PREFIX}ping
@@ -710,9 +710,9 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 ╰ Settings reset when the bot restarts`
         );
       } else if (command === "ping") {
-        await reply("Pong! 🟢 MS1 GROUP BOT is online.");
+        await reply("Pong! 🟢 MS2 GROUP BOT is online.");
       } else if (command === "alive") {
-        await reply("🟢 MS1 GROUP BOT is running.");
+        await reply("🟢 MS2 GROUP BOT is running.");
       } else if (command === "owner") {
         await reply(OWNER_NUMBERS.length ? `Owner: ${OWNER_NUMBERS.map(n => "+" + n).join(", ")}` : "Owner number is not configured yet.");
       } else if (command === "statusseen") {
@@ -834,7 +834,7 @@ const server = http.createServer((req, res) => {
   // A WhatsApp outage must not cause the host to repeatedly kill the Node process.
   if (req.url === "/health" || req.url === "/") {
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
-    res.end("MS1 GROUP BOT process is running\n");
+    res.end("MS2 GROUP BOT process is running\n");
     return;
   }
   res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
