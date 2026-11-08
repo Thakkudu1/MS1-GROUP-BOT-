@@ -11,6 +11,7 @@ const pino = require("pino");
 const fs = require("fs");
 const http = require("http");
 const { startTelegram } = require("./telegram-pairing");
+const { sendVoiceReply } = require("./voice");
 
 const PREFIX = process.env.PREFIX || ".";
 const OWNER_NUMBERS = (process.env.OWNER_NUMBERS || "")
@@ -433,7 +434,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (normalizedPing === PREFIX.toLowerCase() + "ping" || normalizedPing === "ping") {
         console.log("[COMMAND] ping received", JSON.stringify({ chat, fromMe: Boolean(msg.key.fromMe), sender, prefix: PREFIX }));
         try {
-          await sock.sendMessage(chat, { text: "😂 Yes, what you want മച്ചാനേ? ഞാൻ ഇവിടെ ഓൺലൈനിൽ തന്നെയുണ്ട്! പറയൂ, എന്താ വേണ്ടത്? 🤖🔥" }, { quoted: msg });
+          await sendVoiceReply(sock, chat, "😂 Yes, what you want മച്ചാനേ? ഞാൻ ഇവിടെ ഓൺലൈനിൽ തന്നെയുണ്ട്! പറയൂ, എന്താ വേണ്ടത്? 🤖🔥", msg);
           console.log("[COMMAND] ping reply sent", chat);
         } catch (e) {
           console.error("[COMMAND] ping reply failed:", e?.stack || e?.message || e);
@@ -551,7 +552,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
           const choices = friendlyReplies.filter(replyText => replyText !== previousReply);
           const replyText = choices[Math.floor(Math.random() * choices.length)] || friendlyReplies[0];
           LAST_OWNER_REPLIES.set(chat, replyText);
-          await sock.sendMessage(chat, { text: replyText }, { quoted: msg }).catch(e =>
+          await sendVoiceReply(sock, chat, replyText, msg).catch(e =>
             console.error("[OWNER MENTION REPLY] failed:", e?.message || e)
           );
         }
@@ -654,8 +655,8 @@ Stay connected, respect everyone, share positive vibes, and help make this group
         }
       }
 
-      const reply = (body) => sock.sendMessage(chat, { text: body }, { quoted: msg });
-      const safePlainCommands = new Set(["menu", "help", "ping", "alive", "owner", "topchat", "mystats", "rules"]);
+      const reply = (body) => sendVoiceReply(sock, chat, body, msg);
+      const safePlainCommands = new Set(["menu", "help", "ping", "alive", "owner", "topchat", "mystats", "rules", "say"]);
       const firstWord = text.trim().split(/\s+/)[0].toLowerCase();
       const command = text.startsWith(PREFIX)
         ? text.slice(PREFIX.length).trim().split(/\s+/)[0].toLowerCase()
@@ -693,6 +694,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ Prefix: ${PREFIX}
 │ ${PREFIX}menu / ${PREFIX}help
 │ ${PREFIX}ping
+│ ${PREFIX}say <text> (send text and cloned voice note)
 │ ${PREFIX}alive
 │ ${PREFIX}topchat (top 10 message senders)
 │ ${PREFIX}mystats (your message count)
@@ -711,6 +713,15 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 │ ${PREFIX}ping / ${PREFIX}alive / ${PREFIX}owner
 ╰ Settings reset when the bot restarts`
         );
+      } else if (command === "say") {
+        const speechText = args.join(" ").trim();
+        if (!speechText) {
+          await reply("ഉദാഹരണം: " + PREFIX + "say നമസ്കാരം കൂട്ടുകാരേ, സുഖമാണോ?");
+        } else if (speechText.length > 1000) {
+          await reply("വോയിസ് ടെക്സ്റ്റ് 1000 അക്ഷരത്തിൽ താഴെയാക്കൂ.");
+        } else {
+          await reply(speechText);
+        }
       } else if (command === "ping") {
         await reply("😂 Yes, what you want മച്ചാനേ? ഞാൻ ഇവിടെ ഓൺലൈനിൽ തന്നെയുണ്ട്! പറയൂ, എന്താ വേണ്ടത്? 🤖🔥");
       } else if (command === "alive") {
