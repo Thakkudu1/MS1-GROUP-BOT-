@@ -839,7 +839,15 @@ const server = http.createServer((req, res) => {
         lastError: lastCredsSaveError
       },
       uptimeSeconds: Math.floor(process.uptime()),
-      sessionStorage: SESSION_DIR
+      sessionStorage: SESSION_DIR,
+      voice: {
+        repliesEnabled: String(process.env.VOICE_REPLIES || "true").toLowerCase() !== "false",
+        apiKeyConfigured: Boolean(String(process.env.SARVAM_API_KEY || "").trim()),
+        voiceIdConfigured: Boolean(String(process.env.SARVAM_VOICE_ID || "").trim()),
+        ready: String(process.env.VOICE_REPLIES || "true").toLowerCase() !== "false" &&
+          Boolean(String(process.env.SARVAM_API_KEY || "").trim()) &&
+          Boolean(String(process.env.SARVAM_VOICE_ID || "").trim())
+      }
     }) + "\n");
     return;
   }
