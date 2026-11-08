@@ -811,7 +811,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
   starting = false;
 }
 // DormHost expects an HTTP listener on PORT. These endpoints are health checks only.
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || process.env.SERVER_PORT || 3000);
 const server = http.createServer((req, res) => {
   if (req.url === "/status") {
     res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
