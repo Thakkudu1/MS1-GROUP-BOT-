@@ -1,7 +1,7 @@
 {
-  "name": "ms1-group-bot",
+  "name": "ms2-group-bot",
   "version": "1.2.0",
-  "description": "MS1 GROUP BOT with pairing-code-only WhatsApp login",
+  "description": "MS2 GROUP BOT with pairing-code-only WhatsApp login",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
