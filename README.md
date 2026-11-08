@@ -30,6 +30,19 @@ Independent MS2 deployment on the `ms2-group-bot` branch. The original `main` br
 - `STATUS_AUTO_REACT` and `STATUS_AUTO_SEEN`: `true` or `false`.
 - `SESSION_DIR` and `STATS_FILE`: optional paths for session and message-count storage.
 
+## Sarvam cloned-voice replies
+
+This branch includes an optional Sarvam Instant Voice Cloning integration in `voice.js`. The existing text reply is sent first; when voice is configured, the bot also sends a WhatsApp voice note for replies routed through `sendVoiceReply` (including `.ping`, `.say <text>`, and owner-mention replies). Voice API failures are logged and do not cancel the text reply.
+
+Set these values in the hosting panel's private environment variables or private `.env` file:
+
+- `SARVAM_API_KEY`: Sarvam API key. Never commit or share it.
+- `SARVAM_VOICE_ID`: saved clone ID from Sarvam Content Studio → My voices.
+- `VOICE_LANGUAGE=ml-IN`: Malayalam output.
+- `VOICE_REPLIES=true`: enable voice notes (set to `false` to disable).
+
+The clone must be created by someone who has the speaker's permission. Sarvam's one-shot API is `POST https://api.sarvam.ai/voices/clone`; the implementation sends the saved `voice_id` and decodes the returned base64 audio. The `/status` health endpoint reports only whether these settings are configured; it never exposes their values.
+
 ## Telegram pairing
 
 Create a dedicated Telegram bot with BotFather. Add its token and the owner's numeric Telegram ID to the private `.env` file. In the bot's private Telegram chat, use `/start`, then `/pair`, and follow the prompts. Send the WhatsApp number with country code; the bot returns a pairing code. On WhatsApp, choose Linked devices → Link a device → Link with phone number. This branch disables QR login. Never share the Telegram token or pairing code.
