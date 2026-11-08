@@ -197,7 +197,7 @@ async function startBot() {
     auth: state,
     logger: pino({ level: process.env.LOG_LEVEL || "silent" }),
     printQRInTerminal: false,
-    browser: ["MS2 GROUP BOT", "Chrome", "1.0.0"],
+    browser: ["Ubuntu", "Chrome", "122.0.0.0"],
     // Keep the WhatsApp WebSocket alive and allow slower mobile/host networks
     // enough time to complete handshakes and queries.
     keepAliveIntervalMs: 20_000,
