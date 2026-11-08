@@ -433,7 +433,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
       if (normalizedPing === PREFIX.toLowerCase() + "ping" || normalizedPing === "ping") {
         console.log("[COMMAND] ping received", JSON.stringify({ chat, fromMe: Boolean(msg.key.fromMe), sender, prefix: PREFIX }));
         try {
-          await sock.sendMessage(chat, { text: "Pong! 🟢 MS2 GROUP BOT is online." }, { quoted: msg });
+          await sock.sendMessage(chat, { text: "😂 Yes, what you want മച്ചാനേ? ഞാൻ ഇവിടെ ഓൺലൈനിൽ തന്നെയുണ്ട്! പറയൂ, എന്താ വേണ്ടത്? 🤖🔥" }, { quoted: msg });
           console.log("[COMMAND] ping reply sent", chat);
         } catch (e) {
           console.error("[COMMAND] ping reply failed:", e?.stack || e?.message || e);
@@ -712,7 +712,7 @@ Stay connected, respect everyone, share positive vibes, and help make this group
 ╰ Settings reset when the bot restarts`
         );
       } else if (command === "ping") {
-        await reply("Pong! 🟢 MS2 GROUP BOT is online.");
+        await reply("😂 Yes, what you want മച്ചാനേ? ഞാൻ ഇവിടെ ഓൺലൈനിൽ തന്നെയുണ്ട്! പറയൂ, എന്താ വേണ്ടത്? 🤖🔥");
       } else if (command === "alive") {
         await reply("🟢 MS2 GROUP BOT is running.");
       } else if (command === "owner") {
