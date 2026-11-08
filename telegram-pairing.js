@@ -25,8 +25,8 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
       }
       if (command === 'start') {
         await bot.sendMessage(msg.chat.id, authorized(msg)
-          ? '👑 MS1 GROUP BOT\n\nQR login is disabled. Send /pair to link WhatsApp using a phone-number pairing code only.'
-          : 'MS1 GROUP BOT\nYour Telegram ID: ' + String(msg.from?.id || '') + '\nAsk the owner to configure this ID privately.');
+          ? '👑 MS2 GROUP BOT\n\nQR login is disabled. Send /pair to link WhatsApp using a phone-number pairing code only.'
+          : 'MS2 GROUP BOT\nYour Telegram ID: ' + String(msg.from?.id || '') + '\nAsk the owner to configure this ID privately.');
         return;
       }
       if (command === 'pair') {
@@ -74,7 +74,7 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
         const cleanCode = rawCode.replace(/[^A-Za-z0-9]/g, '');
         const formatted = cleanCode.length === 8 ? cleanCode.slice(0, 4) + '-' + cleanCode.slice(4) : rawCode;
         await bot.sendMessage(msg.chat.id,
-          '🔐 MS1 GROUP BOT — Pairing Code\n\n' + formatted +
+          '🔐 MS2 GROUP BOT — Pairing Code\n\n' + formatted +
           '\n\nWhatsApp → Linked devices → Link a device → Link with phone number instead. Enter this code promptly. Never forward or share it.');
       } catch (error) {
         console.error('[PAIRING] Pairing-code request failed:', error?.message || error);
@@ -85,7 +85,7 @@ function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
       return;
     } catch (error) {
       console.error('[TELEGRAM] Message handling failed:', error?.message || error);
-      try { await bot.sendMessage(msg.chat.id, 'MS1 bot could not complete that request. Please try again.'); } catch {}
+      try { await bot.sendMessage(msg.chat.id, 'MS2 bot could not complete that request. Please try again.'); } catch {}
     }
   });
 
