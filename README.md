@@ -1,51 +1,30 @@
-# MS2 GROUP BOT
+# MS2 WhatsApp Group Bot
 
-Independent MS2-branded deployment branch based on the existing MS1 project. The original `main` branch is not changed.
+Independent MS2 deployment on the `ms2-group-bot` branch. The original `main` branch (MS1) is not changed.
 
-## Runtime
-- Node.js 20 or newer
+## Runtime and hosting
+
+- Node.js 20 or newer; Baileys 6.7.24.
+- Install command: `npm install`
 - Start command: `npm start`
-- Health endpoint: `/health`
-- Status endpoint: `/status`
-- WhatsApp library: Baileys 6.7.24
-- Telegram control: `node-telegram-bot-api`
+- Health endpoint: `/health`; detailed status endpoint: `/status`.
+- Mount a persistent volume at `/data`. WhatsApp auth files default to `/data/session`; message counts default to `/data/message-counts.json`.
+- In BotNix Cloud, deploy this repository's `ms2-group-bot` branch as a Node.js service, set the start command to `npm start`, attach persistent storage at `/data`, and configure the variables in `.env.example` in the dashboard. The exact volume controls must be confirmed in the account.
 
-## Telegram pairing setup
-1. In Telegram, open **@BotFather** and create a new bot for MS2.
-2. Copy the new bot token. Do not post it publicly or commit it to GitHub.
-3. Set `TELEGRAM_BOT_TOKEN` in the hosting provider's environment settings.
-4. Set `TELEGRAM_OWNER_ID` to the owner's numeric Telegram ID. Start the new bot and send `/id`; use the returned numeric ID.
-5. Set `OWNER_NUMBERS` to the WhatsApp owner number with country code (digits only; multiple numbers separated by commas).
-6. Set `PREFIX=.` (or your preferred command prefix).
-7. In a private chat with the new Telegram bot, send `/start`, then `/pair`, then the WhatsApp number including country code. Enter the returned code in WhatsApp: **Linked devices → Link a device → Link with phone number instead**.
+## Telegram pairing
 
-The pairing code is a secret. Never share it. Keep a persistent disk mounted at `/data` so `/data/session` survives restarts.
+Create a dedicated Telegram bot with BotFather. Set `TELEGRAM_BOT_TOKEN` and the owner's numeric `TELEGRAM_OWNER_ID` in the hosting dashboard. In the bot's private Telegram chat, use `/start`, then `/pair`, and follow the prompts. The owner sends their WhatsApp number with country code; the bot returns an 8-character pairing code. On WhatsApp choose Linked devices → Link a device → Link with phone number instead. Never share the Telegram token or pairing code.
 
-## Hosting environment variables
-Required for Telegram pairing:
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_OWNER_ID`
+## Environment variables
 
-Recommended:
-- `OWNER_NUMBERS`
-- `PREFIX=.`
-- `WARN_LIMIT=3`
-- `SESSION_DIR=/data/session`
-- `STATS_FILE=/data/message-counts.json`
-- `PORT` (provided by the host; defaults to 3000)
+See `.env.example`. Also set `OWNER_NUMBERS` to the owner's WhatsApp number including country code, digits only. Do not commit real secrets.
 
-Do not add real tokens, phone numbers, or session files to this repository.
+## Included commands and behavior
 
-## Commands currently present in the inherited code
-- `.menu`, `.help`, `.ping`, `.alive`, `.owner`
-- `.topchat`, `.mystats`
-- `.tagall`, `.kick`, `.promote`, `.demote`
-- `.warn`, `.warnings`
-- `.antilink on|off`, `.antidelete on|off`, `.antispam on|off`
-- `.securityalerts on|off`, `.welcome on|off`, `.rules [text]`
-- Owner-only status controls: `.statusreact on|off`, `.statusseen on|off`
+`.menu`, `.help`, `.ping`, `.alive`, `.owner`, `.topchat`, `.mystats`, `.tagall`, `.kick`, `.promote`, `.demote`, `.warn`, `.warnings`, `.antilink`, `.antidelete`, `.antispam`, `.securityalerts`, `.welcome`, `.rules`, `.statusreact`, and `.statusseen`.
 
-Group moderation actions require the bot to be a group admin. Telegram control is restricted to the configured owner ID.
+Also includes Telegram owner-only pairing, welcome/goodbye notices, persistent message counts, text anti-delete recovery for messages observed while online, link/spam moderation, status auto-seen/reactions, and reconnect/session-save handling. Admin actions require the bot to be a WhatsApp group admin and remain subject to WhatsApp restrictions. Some group settings and warning counts currently reset after restart.
 
-## Important scope note
-This branch carries forward the features actually present in the source project. Features not implemented in that source (for example, an AI chat provider integration, restaurant ordering automation, or custom Malayalam audio greeting) still need separate implementation and credentials; they are not claimed as completed here.
+## Not implemented or not yet verified
+
+AI-generated Malayalam replies, Malayalam audio greetings, fake-number detection/automatic banning, and restaurant menu/order automation are not implemented in this branch. Deployment, persistent-volume behavior, Telegram credentials, WhatsApp pairing, and continuous uptime must be tested in BotNix Cloud before the service can be considered live.
