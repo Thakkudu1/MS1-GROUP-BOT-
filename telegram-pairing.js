@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const TelegramBot = require('node-telegram-bot-api');
 
 function startTelegram(getSocket, isPairingReady, waitForPairingReady) {
